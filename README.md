@@ -12,13 +12,13 @@ Assuming Ubuntu 21.10:
 
 ```
 sudo apt install python2.7 netbpm
-git clone https://github.com/vaskas/PyPlucker
+git clone https://github.com/lxmx/PyPlucker
 sudo cp -R PyPlucker /usr/lib/python2.7/site-packages/
 sudo ln -s /usr/lib/python2.7/site-packages/PyPlucker/Spider.py /usr/local/bin/plucker-build 
 cp PyPlucker/pluckerrc.sample ~/.pluckerrc
 ```
 
-## Usage example
+## Usage 
 
 ```
 plucker-build --bpp=4 --maxdepth=1 --doc-file=PythonCompileAllDoc -H https://docs.python.org/3/library/compileall.html
@@ -26,6 +26,10 @@ plucker-build --bpp=4 --maxdepth=1 --doc-file=PythonCompileAllDoc -H https://doc
 ```
 
 See `~/.pluckerrc` for the options and parameters. Also see the excellent official documentation as supplied in the [Palm bundle](https://palmdb.net/app/plucker).
+
+### In Practice
+
+Since it's been a while since Plucker's HTML parser was last updated, it's a good idea to run more complex pages through a modern Readability filter like [percollate](https://github.com/danburzo/percollate) first. See an actual usage [example here](https://gist.github.com/vaskas/7262d815988a0a6d165830f66399ca67).
 
 ## TODO
 
