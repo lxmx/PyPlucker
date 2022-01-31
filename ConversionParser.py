@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 """
 ConversionParser.py   $Id: ConversionParser.py,v 1.5 2004/10/20 01:44:53 chrish Exp $

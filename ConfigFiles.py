@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 """
 ConfigFiles.py   $Id: ConfigFiles.py,v 1.9 2002/05/18 10:28:24 nordstrom Exp $

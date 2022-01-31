@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """
 Decode.py $Id: Decode.py,v 1.4 2002/05/18 10:28:24 nordstrom Exp $
 

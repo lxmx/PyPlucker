@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 """
 Url.py   $Id: Url.py,v 1.20 2003/12/17 02:28:47 jimj Exp $

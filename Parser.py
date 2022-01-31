@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 """
 Parser.py   $Id: Parser.py,v 1.22 2005/01/12 01:47:16 chrish Exp $

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 """
 ExclusionList.py   $Id: ExclusionList.py,v 1.8 2005/04/04 01:46:07 chrish Exp $

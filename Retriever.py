@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 """
 Retriever.py   $Id: Retriever.py,v 1.28 2003/12/17 03:46:01 jimj Exp $

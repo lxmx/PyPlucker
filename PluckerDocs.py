@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #  -*- mode: python; indent-tabs-mode: nil; -*- coding: iso-8859-1 -*-
 
 """
