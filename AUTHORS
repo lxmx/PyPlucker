@@ -1,0 +1,108 @@
+Mark Lillywhite <plucker@rubberchicken.org>
+-------------------------------------------
+Originator, mailing list maintainer, bug fixing, viewer development
+
+
+Michael Nordström <plucker@tarfu.se>
+------------------------------------
+Viewer maintainer, bug fixing, API documentation, configuration scripts,
+Linux/Unix package
+
+
+Alexander Wagner <A.Wagner@Bigfoot.de>
+--------------------------------------
+Perl-based conduit, OS/2 porting of parser scripts, OS/2 installation
+scripts, TeX documentation
+
+
+David A. Desrosiers <desrod@gnu-designs.com> 
+---------------------------------------------
+Perl parser, CVS-maintainer, Plucker Reflector, Plucker Server, viewer
+development, bug tracker, DB conduit, Plucker Bookmark Assistant.
+
+
+Holger Dürer <H.Duerer@ZAIT.Uni-Bremen.DE>
+------------------------------------------
+Disassembler tool, Python parser
+
+
+Chris Hawks <chawks@dls.net>
+------------------------------------
+Viewer development, Python parser, pluck-comics, cpluck
+
+
+Dirk Heiser <plucker@Dirk-Heiser.de>
+------------------------------------
+Windows porting of conduit and other tools
+
+
+Bill Janssen <bill@janssen.org>
+-------------------------------
+Python parser, image-processing utilities, documentation
+
+
+Robert O'Connor <rob@medicalmnemonics.com>
+------------------------------------------
+Viewer development, plucker-desktop (GUI application)
+
+
+Adam McDaniel <adamm@array.org>
+-------------------------------
+Viewer development (Sony/Handera JogDial, Sony/Handera/Palm HiRes,
+Palm OS5 optimizations, Bluetooth, Tungsten FiveWay D-Pad support),
+Clean Plucker utility
+
+
+Matsumoto Masakazu <matto@aqua.chem.nagoya-u.ac.jp>
+---------------------------------------------------
+Viewer development, i18n branch, Japanese translation
+
+
+Alexander R. Pruss <ap85@georgetown.edu>
+----------------------------------------
+Viewer development, search armlet
+
+
+Thorsten Ratzka <tnratzka@gmx.net>
+----------------------------------
+OS/2 Installer using WarpIN, OS/2 configuration tools
+
+
+Ondrej Palkovsky <ondrap@penguin.cz>
+------------------------------------
+Python parser
+
+
+Pat Trainor <ptrainor@title14.com>
+----------------------------------
+Perl parser
+
+
+Jiva DeVoe <jiva@devware.com>
+-----------------------------
+Viewer development
+
+
+Angel Ivan Moreno <angel_ivan@menta.net>
+----------------------------------------
+AxxPac support
+
+
+Rod Whitby <software.plucker@rwhitby.net>
+-----------------------------------------
+Handspring JogDial support
+
+
+Jim Jewett <JimJJewett@yahoo.com>
+---------------------------------
+Python parser
+
+
+David Maddock <d.maddock1@cox.net>
+----------------------------------
+i-mode support, external bookmarks support in viewer
+
+
+--------------------------------------------------------------------------
+If you feel left out, then please add yourself to the file, or send e-mail
+to plucker-team@rubberchicken.org!
