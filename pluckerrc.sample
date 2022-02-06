@@ -1,5 +1,5 @@
 ;;
-;; This is a sample config file.  
+;; This is a sample config file.
 ;;
 ;; Under OS/2 and Windows this should be called 'plucker.ini'.
 ;; For Windows, put this in the pluckerhome directory or in the
@@ -10,8 +10,8 @@
 ;; This should have been installed in the correct place.
 ;;
 ;;
-;; Entries are key = value pairs ordered into section.  A section is 
-;; named and begins with a line in square bracket, where the brackets 
+;; Entries are key = value pairs ordered into section.  A section is
+;; named and begins with a line in square bracket, where the brackets
 ;; contain the section name.
 ;;
 ;; General entries can go into the [DEFAULT] section.
@@ -59,7 +59,7 @@
 ;;doc_file =
 
 ;;
-;; Compression type 
+;; Compression type
 ;;
 ;;   doc  - use the DOC compression (works on all supported versions)
 ;;   zlib - use ZLib compression (doesn't work on 2.x devices)
@@ -69,7 +69,7 @@
 ;;compression = doc
 
 ;;
-;; Default category for the created document (you can assign several 
+;; Default category for the created document (you can assign several
 ;; categories separated by ';')
 ;;
 ;;category = Unfiled
@@ -80,9 +80,9 @@
 ;; If the copy prevention attribute is set it will not be
 ;; possible to beam a copy of the document to another device.
 ;; The backup attribute will indicate that the document should
-;; be backed up (requires a desktop tool that checks this 
-;; attribute) and the launchable attribute will make the 
-;; document visible so that the user can tap on it to launch 
+;; be backed up (requires a desktop tool that checks this
+;; attribute) and the launchable attribute will make the
+;; document visible so that the user can tap on it to launch
 ;; the viewer with the selected document.
 ;;
 ;;copyprevention_bit = false
@@ -95,7 +95,7 @@
 ;; that the spider should only follow links on the same
 ;; host (site) and/or fetch pages below the home URL
 ;; whose URLs starts with the given STAYBELOW value.
-;; 
+;;
 ;;home_url        = plucker:/home.html
 ;;home_maxdepth   = 2
 ;;home_stayonhost = false
@@ -107,9 +107,9 @@
 ;;bpp = 1
 
 ;;
-;; Max width and height for the images. Alternative maximum width 
-;; and height can also be specified. These values are used for 'big' 
-;; versions of inlined images that had to be scaled down in size to 
+;; Max width and height for the images. Alternative maximum width
+;; and height can also be specified. These values are used for 'big'
+;; versions of inlined images that had to be scaled down in size to
 ;; obey the maxwidth and maxheight parameters.
 ;;
 ;;maxwidth      = 150
@@ -123,55 +123,56 @@
 ;;
 ;;image_compression_limit = 300
 
-;; Specify which parser to use to convert images. Defaults to 
+;; Specify which parser to use to convert images. Defaults to
 ;; whatever the system determines to be the default parser.
 ;;
-;;   imagemagick - ImageMagick image parser
 ;;   netpbm2     - NetPbm image parser
-;;   pil2        - PIL image parser
 ;;   windows     - Windows image parser
 ;;
-;;image_parser = 
+;;image_parser =
+
+;; Override the default user agent (some websites are blocking Python-urllib/2.7)
+;;user_agent = Mozilla/5.0 (Windows; U; MSIE 9.0; WIndows NT 9.0; en-US))
 
 ;;
 ;; A string specifying a command to be executed before spidering.
 ;;
-;;before_command  = 
+;;before_command  =
 ;;before_command1 =
 ;; :
-;;before_command9 = 
+;;before_command9 =
 
 ;;
 ;; A string specifying a command to be executed after spidering.
 ;;
 ;;after_command  =
-;;after_command1 = 
+;;after_command1 =
 ;; :
-;;after_command9 = 
+;;after_command9 =
 
 ;;
 ;; Store an icon in AppInfo block. If no big or small icons
 ;; are specified default icons will be used.
 ;;
 ;;icon       = false
-;;big_icon   = 
-;;small_icon = 
+;;big_icon   =
+;;small_icon =
 
 ;;
-;; Specify proxy (http://proxy:port) and username and password for 
-;; basic proxy authentication if that is used. The environment variables 
-;; HTTP_PROXY, HTTP_PROXY_USER and HTTP_PROXY_PASS will be used as 
+;; Specify proxy (http://proxy:port) and username and password for
+;; basic proxy authentication if that is used. The environment variables
+;; HTTP_PROXY, HTTP_PROXY_USER and HTTP_PROXY_PASS will be used as
 ;; default values.
 ;;
 ;;http_proxy       =
-;;http_proxy_user  = 
-;;http_proxy_pass  = 
+;;http_proxy_user  =
+;;http_proxy_pass  =
 
 ;;
 ;; Specify a conversion program to convert Word Documents to HTML.
 ;; They will automagically be handled as HTML by the parser.
 ;; So far only wvWare is supported.
-;; worddoc_converter = 
+;; worddoc_converter =
 
 ;; -----------------------------------------------------------------
 [POSIX]
@@ -191,7 +192,7 @@
 ;;convert_program   = convert
 
 ;;
-;; Name (and maybe path) for the color maps used by 
+;; Name (and maybe path) for the color maps used by
 ;; ppmquant:
 ;;
 ;;palm1bit_graymap_file     = palmgray1.map
@@ -200,10 +201,10 @@
 ;;palm8bit_stdcolormap_file = palmcolor8.map
 
 ;;
-;; List of filename specifying exclusion lists to be 
+;; List of filename specifying exclusion lists to be
 ;; inspected.  Names are separated by colons.
 ;;
-;;exclusion_lists = 
+;;exclusion_lists =
 
 
 ;; -------------------------------------------------------------------
@@ -212,10 +213,10 @@
 ;; For OS/2, you can also set the following items:
 
 ;;
-;; List of filename specifying exclusion lists to be 
+;; List of filename specifying exclusion lists to be
 ;; inspected.  Names are separated by semicolons.
 ;;
-;;exclusion_lists = 
+;;exclusion_lists =
 
 
 ;; --------------------------------------------------------------------
@@ -224,10 +225,10 @@
 ;; For Windows, you can also set the following items:
 
 ;;
-;; List of filename specifying exclusion lists to be 
+;; List of filename specifying exclusion lists to be
 ;; inspected.  Names are separated by semicolons.
 ;;
-;;exclusion_lists = 
+;;exclusion_lists =
 
 ;;
 ;; Name (and maybe path) for the ImageMagick convert tool
@@ -295,7 +296,7 @@
 
 
 ;;
-;; The following items are currently only used if the Installer is 
+;; The following items are currently only used if the Installer is
 ;; used to setup the desktop tools:
 
 ;;
@@ -374,13 +375,13 @@
 ;;text_editor = "Notepad.exe %s"
 
 ;;
-;; Program to use for HTML files stored on the web. (%s is 
+;; Program to use for HTML files stored on the web. (%s is
 ;; the placeholder for the path and filename for the file)
 ;;
 ;;url_editor = "%s"
 
 ;;
-;; Program used to view HTML files (local and web). (%s is 
+;; Program used to view HTML files (local and web). (%s is
 ;; the placeholder for the path and filename for the file)
 ;;
 ;;html_viewer = "%s"
@@ -392,4 +393,4 @@
 ;;
 ;; Path to the Plucker Program Group.
 ;;
-;;group_path = 
+;;group_path =

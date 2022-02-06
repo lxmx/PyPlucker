@@ -75,9 +75,9 @@ class PluckerFancyOpener (urllib.FancyURLopener):
     def __init__(self, alias_list=None, config=None, *args):
         apply(urllib.FancyURLopener.__init__, (self,) + args)
         self._alias_list = alias_list
-        self.remove_header ('User-agent')
+        self.remove_header ('User-Agent')
         user_agent = (config and config.get_string('user_agent', None)) or 'Plucker/Py-%s' % __version__
-        self.addheader ('User-agent', user_agent)
+        self.addheader ('User-Agent', user_agent)
         referrer = config and config.get_string('referrer', None)
         if referrer:
             self.addheader('Referer', referrer)
@@ -98,41 +98,6 @@ class PluckerFancyOpener (urllib.FancyURLopener):
                 del self.addheaders[i]
                 return 1
         return 0
-
-    # Do not do this - addinfourl raised an exception on
-    # None, because the default had already closed the file.
-    #
-    # Default error handling -- don't raise an exception, but remember the code
-    #
-    #def http_error_default(self, url, fp, errcode, errmsg, headers):
-    #    res = urllib.addinfourl(fp, headers, "http:" + url)
-    #    res.retcode = errcode
-    #    res.retmessage = errmsg
-    #    return res
-
-    # Do not do this - urllib now handles redirection
-    #def http_error_302(self, url, fp, errcode, errmsg, headers,
-    #           data=None):
-    #    # XXX The server can force infinite recursion here!
-    #    if self._alias_list:
-    #        if headers.has_key('location'):
-    #            newurl = headers['location']
-    #        elif headers.has_key('uri'):
-    #            newurl = headers['uri']
-    #        else:
-    #            return
-    #        old_url = Url.URL ('http:'+url)
-    #        new_url = Url.URL (newurl, old_url)
-    #        self._alias_list.add (old_url, new_url)
-    #    if headers.has_key('location'):
-    #        newurl = headers['location']
-    #    elif headers.has_key('uri'):
-    #        newurl = headers['uri']
-    #    return urllib.FancyURLopener.http_error_302 (self, url, fp, errcode, errmsg, headers, data)
-    #
-    #http_error_301 = http_error_302
-    #http_error_303 = http_error_302
-
 
 def parse_http_header_value(headerval):
     mval = None
@@ -220,22 +185,6 @@ class SimpleRetriever:
                         headers_dict.update (doc_info.dict)
                     return (headers_dict, None)
                 if hasattr (webdoc, 'url'):
-                    #######################################################################
-                    # Redhat 7.x default Python installation will return                  #
-                    # webdoc.url without a protocol at the beginning                      #
-                    # (e.g. ://www.xyz.com instead of http://www.xyz.com).                #
-                    # This is due to a bug in RH's /usr/lib/python1.5/urllib.py.          #
-                    # -joefefifo@yahoo.com                                                #
-                    #######################################################################
-                      ################################################
-                      # On Windows we wan't use                      #
-                      # URL(url).get_protocol to get the protokoll   #
-                      # urllib.splittype(url) and all other url      #
-                      # manipuling funktions are too buggy           #
-                      ################################################
-
-
-
                     if sys.platform == 'win32':
                         from PyPlucker.Url import URL
                         webdoc_protocol = URL(webdoc.url).get_protocol
