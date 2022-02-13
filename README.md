@@ -2,7 +2,9 @@
 
 It's 2022 and you need a Palm!
 
-This is an import of the Python based Plucker parser from the [original repository](https://github.com/arpruss/plucker). It's meant to work on a recent GNU/Linux distro.
+This is an import of the Python based Plucker parser from the [original repository](https://github.com/arpruss/plucker). It's meant to work on a recent GNU/Linux distro. The parser downloads your favorite web pages or converts local files for the [Plucker app](https://palmdb.net/app/plucker).
+
+<img src="https://user-images.githubusercontent.com/58649917/153739856-226c672f-bfb9-4436-ac2d-de79e63a4e3c.png" width=320/>
 
 I have also stripped some legacy bits like OS/2 support and broken image converter alternatives.
 
