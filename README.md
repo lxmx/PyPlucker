@@ -1,6 +1,6 @@
 # PyPlucker
 
-It's 2022 and you need a Palm.
+It's 2022 and you need a Palm!
 
 This is an import of the Python based Plucker parser from the [original repository](https://github.com/arpruss/plucker). It's meant to work on a recent GNU/Linux distro.
 
@@ -8,14 +8,21 @@ I have also stripped some legacy bits like OS/2 support and broken image convert
 
 ## Installation
 
-Assuming Ubuntu 21.10:
+Assuming Ubuntu 21.10 or similar. Otherwise you may want to edit the `Makefile`.
+
+Clone the repository and:
 
 ```
 sudo apt install python2.7 netbpm
-git clone https://github.com/lxmx/PyPlucker
-sudo cp -R PyPlucker /usr/lib/python2.7/site-packages/
-sudo ln -s /usr/lib/python2.7/site-packages/PyPlucker/Spider.py /usr/local/bin/plucker-build 
-cp PyPlucker/pluckerrc.sample ~/.pluckerrc
+sudo make install
+```
+
+Optionally, populate the example config file and `home.html`:
+
+```
+cp examples/pluckerrc ~/.pluckerrc
+mkdir ~/.plucker
+cp examples/home.html ~/.plucker/
 ```
 
 ## Usage 
@@ -33,6 +40,4 @@ Since it's been a while since Plucker's HTML parser was last updated, it's a goo
 
 ## TODO
 
-- Port to Python 3
-- Package for PIP
-
+- Port to Python3

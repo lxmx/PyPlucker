@@ -718,7 +718,7 @@ class Spider:
             self._queue.append ((url, attr, key))
             return 1
 
-        if url[:7] == 'http://':
+        if url[:7] == 'http://' and not self._config.get_bool('ignore_robots'):
             self._check_robot(url)
 
         if not force and self._exclusion_list:
