@@ -36,7 +36,7 @@ See `~/.pluckerrc` for the options and parameters. Also see the excellent offici
 
 ### In Practice
 
-Since it's been a while since Plucker's HTML parser was last updated, it's a good idea to run more complex pages through a modern Readability filter like [percollate](https://github.com/danburzo/percollate) first. See an actual usage [example here](https://gist.github.com/vaskas/7262d815988a0a6d165830f66399ca67).
+Since it's been a while since Plucker's HTML parser was last updated, it's a good idea to run more complex pages through a modern Readability filter like [percollate](https://github.com/danburzo/percollate) first. See `examples/pluck.sh` for a working script.
 
 ## TODO
 
