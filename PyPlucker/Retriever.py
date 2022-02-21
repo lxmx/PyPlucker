@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 """
 Retriever.py   $Id: Retriever.py,v 1.28 2003/12/17 03:46:01 jimj Exp $
@@ -14,7 +14,7 @@ Distributable under the GNU General Public License Version 2 or newer.
 import os, sys
 import string
 import re
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import types
 
 ## The following section tries to get the PyPlucker directory onto the
@@ -26,7 +26,7 @@ except ImportError:
     sys.path = [os.path.split (os.path.dirname (file))[0]] + sys.path
     try: import PyPlucker
     except ImportError:
-        print "Cannot find where module PyPlucker is located!"
+        print("Cannot find where module PyPlucker is located!")
         sys.exit (1)
 
     # and forget the temp names...
@@ -38,17 +38,17 @@ del PyPlucker
 
 try:
     import gzip
-    import StringIO
+    import io
     _have_gzip = 1
 except:
     _have_gzip = 0
 
 from PyPlucker import Url, __version__
-from UtilFns import error, message
+from .UtilFns import error, message
 
 def GuessType (name):
     """Given a name, guess the mime type"""
-    name = string.lower (name)
+    name = name.lower()
     def has_extension (ext, name=name):
         return name[-len(ext):] == ext
 
@@ -62,18 +62,18 @@ def GuessType (name):
                   '.txt': 'text/plain',
                   '.asc': 'text/plain',
                   }
-    for ext in known_map.keys ():
+    for ext in list(known_map.keys ()):
         if has_extension (ext):
             return known_map[ext]
     return 'unknown/unknown'
 
 
-class PluckerFancyOpener (urllib.FancyURLopener):
+class PluckerFancyOpener (urllib.request.FancyURLopener):
     """A subclass of urllib.FancyURLopener, so we can remember an
     error code and the error text."""
 
     def __init__(self, alias_list=None, config=None, *args):
-        apply(urllib.FancyURLopener.__init__, (self,) + args)
+        urllib.request.FancyURLopener.__init__(*(self,) + args)
         self._alias_list = alias_list
         self.remove_header ('User-Agent')
         user_agent = (config and config.get_string('user_agent', None)) or 'Plucker/Py-%s' % __version__
@@ -83,7 +83,7 @@ class PluckerFancyOpener (urllib.FancyURLopener):
             self.addheader('Referer', referrer)
         self.addheader ('Accept', 'image/jpeg, image/gif, image/png, text/html, text/plain, text/xhtml;q=0.8, text/xml;q=0.6, text/*;q=0.4')
 
-        if os.environ.has_key ('HTTP_PROXY') and (os.environ.has_key ('HTTP_PROXY_USER') and os.environ.has_key ('HTTP_PROXY_PASS')):
+        if 'HTTP_PROXY' in os.environ and ('HTTP_PROXY_USER' in os.environ and 'HTTP_PROXY_PASS' in os.environ):
             import base64
             self.addheader ('Proxy-Authorization', 'Basic %s' % string.strip(base64.encodestring("%s:%s" % (os.environ['HTTP_PROXY_USER'], os.environ['HTTP_PROXY_PASS']))))
         #for header in self.addheaders: message(0, "%s", header)
@@ -99,14 +99,49 @@ class PluckerFancyOpener (urllib.FancyURLopener):
                 return 1
         return 0
 
+    # Do not do this - addinfourl raised an exception on
+    # None, because the default had already closed the file.
+    #
+    # Default error handling -- don't raise an exception, but remember the code
+    #
+    #def http_error_default(self, url, fp, errcode, errmsg, headers):
+    #    res = urllib.addinfourl(fp, headers, "http:" + url)
+    #    res.retcode = errcode
+    #    res.retmessage = errmsg
+    #    return res
+
+    # Do not do this - urllib now handles redirection
+    #def http_error_302(self, url, fp, errcode, errmsg, headers,
+    #           data=None):
+    #    # XXX The server can force infinite recursion here!
+    #    if self._alias_list:
+    #        if headers.has_key('location'):
+    #            newurl = headers['location']
+    #        elif headers.has_key('uri'):
+    #            newurl = headers['uri']
+    #        else:
+    #            return
+    #        old_url = Url.URL ('http:'+url)
+    #        new_url = Url.URL (newurl, old_url)
+    #        self._alias_list.add (old_url, new_url)
+    #    if headers.has_key('location'):
+    #        newurl = headers['location']
+    #    elif headers.has_key('uri'):
+    #        newurl = headers['uri']
+    #    return urllib.FancyURLopener.http_error_302 (self, url, fp, errcode, errmsg, headers, data)
+    #
+    #http_error_301 = http_error_302
+    #http_error_303 = http_error_302
+
+
 def parse_http_header_value(headerval):
     mval = None
     parameters = []
-    parts = string.split (headerval, ";")
+    parts = headerval.split (";")
     if parts:
-        mval = string.lower(parts[0])
+        mval = parts[0].lower()
     for part0 in parts[1:]:
-        part = string.strip(string.lower(part0))
+        part = part0.lower().strip()
         m = re.match ('([-a-z0-9]+)=(.*)', part)
         if m:
             parameters.append(m.groups())
@@ -144,7 +179,7 @@ class SimpleRetriever:
             file = open (filename, "rb")
             contents = file.read ()
             file.close ()
-        except IOError, text:
+        except IOError as text:
             return ({'URL': url,
                      'error code': 404,
                      'error text': text},
@@ -182,14 +217,10 @@ class SimpleRetriever:
                     doc_info = webdoc.info ()
                     if doc_info is not None:
                         # This should always be a dict, but some people found None... :-(
-                        headers_dict.update (doc_info.dict)
+                        headers_dict.update (dict(doc_info))
                     return (headers_dict, None)
                 if hasattr (webdoc, 'url'):
-                    if sys.platform == 'win32':
-                        from PyPlucker.Url import URL
-                        webdoc_protocol = URL(webdoc.url).get_protocol
-                    else:
-                        (webdoc_protocol, webdoc_rest_of_url) = urllib.splittype(webdoc.url)
+                    (webdoc_protocol, webdoc_rest_of_url) = urllib.parse.splittype(webdoc.url)
 
                     # check to see we have a valid URL; if not, use one we started with
                     if webdoc_protocol:
@@ -199,14 +230,16 @@ class SimpleRetriever:
                 doc_info = webdoc.info ()
                 message(3, "doc_info is %s", doc_info);
                 if doc_info is not None:
-                    # This should always be a dict, but some people found None... :-(
-                    headers_dict.update (doc_info.dict)
-                if not headers_dict.has_key ('content-type'):
+                    headers_dict.update (dict(doc_info))
+                if ('Content-Type' not in headers_dict) and ('content-type' not in headers_dict):
                     message (1, "Guessing type for %s" % url.get_path ())
-                    headers_dict['content-type'] = GuessType (url.get_path ())
+                    headers_dict['Content-Type'] = GuessType (url.get_path ())
                 else:
-                    ctype, parameters = parse_http_header_value(headers_dict['content-type'])
-                    headers_dict['content-type'] = ctype
+                    for h in ['Content-Type', 'content-type']:
+                        if h in headers_dict:
+                            hname = h
+                    ctype, parameters = parse_http_header_value(headers_dict[hname])
+                    headers_dict['Content-Type'] = ctype
                     for parm in parameters:
                         headers_dict[parm[0]] = parm[1]
 
@@ -216,10 +249,10 @@ class SimpleRetriever:
                 contents = webdoc.read ()
 
                 # Check if encoded contents...
-                if headers_dict.has_key ('content-encoding'):
+                if 'content-encoding' in headers_dict:
                     encoding = headers_dict['content-encoding']
                     if encoding == 'gzip' and _have_gzip:
-                        s = StringIO.StringIO (contents)
+                        s = io.StringIO (contents)
                         g = gzip.GzipFile (fileobj=s)
                         c = g.read ()
                         g.close ()
@@ -230,12 +263,12 @@ class SimpleRetriever:
                                  'error text': "Unhandled content-encoding '%s'" % encoding},
                                 None)
 
-            except IOError, text:
+            except IOError as text:
                 return ({'URL': real_url,
                          'error code': 404,
                          'error text': text},
                         None)
-	    except OSError, text:
+            except OSError as text:
                 return ({'URL': real_url,
                          'error code': 404,
                          'error text': text},
@@ -255,7 +288,7 @@ class SimpleRetriever:
             url = Url.URL (Url.CleanURL (url))
 
         data_key = (str (url), post_data)
-        if self._cache.has_key (data_key):
+        if data_key in self._cache:
             # has been retrieved before, we just return the cached data
             return self._cache[data_key]
         else:
@@ -273,16 +306,16 @@ if __name__ == '__main__':
     import sys
     retriever = SimpleRetriever ("~/.plucker", "~/.plucker")
     for name in sys.argv[1:]:
-        print "\n\nFetching %s" % name
+        print("\n\nFetching %s" % name)
         (header, data) = retriever.retrieve (name, None, None)
-        items = header.keys ()
+        items = list(header.keys ())
         items.sort ()
-        print "Headers:"
+        print("Headers:")
         for item in items:
-            print "  %s:\t%s" % (item, header[item])
-        print "Data:"
+            print("  %s:\t%s" % (item, header[item]))
+        print("Data:")
         text = repr (data)[1:-1]
         if len (text) > 80:
             text = text[:60] + " ... " + text[-10:]
-        print "  " + text
+        print("  " + text)
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #  -*- mode: python; indent-tabs-mode: nil; -*-
 
 """
@@ -16,11 +16,11 @@ others Copyright 1999 by Holger Duerer <holly@starship.python.net>
 Distributable under the GNU General Public License Version 2 or newer.
 """
 
-import os, sys, string, tempfile, re, operator
+import os, sys, string, tempfile, re, operator, subprocess
 try:
-    from cStringIO import StringIO
+    from io import StringIO
 except ImportError:
-    from StringIO import StringIO
+    from io import StringIO
 from PyPlucker import PluckerDocs, DEFAULT_IMAGE_PARSER_SETTING
 from PyPlucker.UtilFns import message, error
 
@@ -272,11 +272,11 @@ class ImageParser:
         # check for alternative versions of this image
         # First, figure out if the image has been scaled down at all
         full_width, full_height = self.size()
-        attrib_width = self._attribs.has_key('width') and is_int(self._attribs.get('width')) and int(self._attribs.get('width'))
-        attrib_height = self._attribs.has_key('height') and is_int(self._attribs.get('height')) and int(self._attribs.get('height'))
+        attrib_width = 'width' in self._attribs and is_int(self._attribs.get('width')) and int(self._attribs.get('width'))
+        attrib_height = 'height' in self._attribs and is_int(self._attribs.get('height')) and int(self._attribs.get('height'))
         versions = self._related_images(width < (attrib_width or (section and section[2]) or full_width) or
                                         height < (attrib_height or (section and section[3]) or full_height))
-        map(lambda x, doc=doc: doc.add_related_image(x[0], x[1]), versions)
+        list(map(lambda x, doc=doc: doc.add_related_image(x[0], x[1]), versions))
         return doc
 
 
@@ -335,7 +335,7 @@ class ImageParser:
         # First, figure out if the image has been scaled down at all
         full_width, full_height = self.size()
         versions = self._related_images(width < full_width or height < full_height)
-        map(lambda x, doc=doc: doc.add_related_image(x[0], x[1]), versions)
+        list(map(lambda x, doc=doc: doc.add_related_image(x[0], x[1]), versions))
         return doc
 
 
@@ -372,7 +372,7 @@ class NewNetPBMImageParser(ImageParser):
         if (self._type=='image/gif'):
             command = giftopnm
         elif (self._type=='image/jpeg'):
-            command = djpeg + ' -pnm'
+            command = djpeg + ' -pnm' # make command an array
         elif (self._type=='image/png'):
             command = pngtopnm
         elif (self._type=='image/palm'):
@@ -388,24 +388,27 @@ class NewNetPBMImageParser(ImageParser):
             self._pnmdata = self._bits
         else:
             try:
-                command = command + " > " + self._tmpfile
                 if self._verbose > 1:
                     message(2, "Running:  " + command)
-                else:
-                    command = "( " + command + " ) 2>/dev/null"
-                pipe = os.popen(command, "w"+binary_flag)
-                pipe.write(self._bits)
-                status = pipe.close()
-                if status:
+
+                p = subprocess.run(command.split(' '), input=self._bits, capture_output=True)
+
+                f = open(self._tmpfile, 'wb')
+                f.write(p.stdout)
+                f.close()
+
+                status = p.returncode
+
+                if status != 0:
                     raise RuntimeError("call to '" + command + "' returned status " + str(status))
-                f = open(self._tmpfile, 'r'+binary_flag)
+                f = open(self._tmpfile, 'rb')
                 self._pnmdata = f.read()
                 f.close()
             finally:
                 if os.path.exists(self._tmpfile): os.unlink(self._tmpfile)
 
         # now read the width and height from the PNM data
-        m = pnmheader_pattern.match(self._pnmdata)
+        m = pnmheader_pattern.match(self._pnmdata.decode('latin-1'))
         if not m:
             raise RuntimeError("Invalid PNM header found in converted PNM data:  %s" % str(self._pnmdata[:min(len(self._pnmdata),15)]))
         if m.group(1):
@@ -414,6 +417,7 @@ class NewNetPBMImageParser(ImageParser):
         else:
             # greyscale or color, so use second group
             self._size = (int(m.group(5)), int(m.group(6)))
+
 
 
     def size (self):
@@ -489,337 +493,35 @@ class NewNetPBMImageParser(ImageParser):
         if prescale_cmd:
             command = prescale_cmd + command
 
-        command = command + " > " + self._tmpfile
         if self._verbose > 1:
             message(2, "Running:  " + command)
-        else:
-            command = "( " + command + " ) 2>/dev/null"
+
         try:
-            pipe = os.popen(command, 'w'+binary_flag)
-            pipe.write(self._pnmdata)
-            status = pipe.close()
-            if status:
+            p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            out, err = p.communicate(input=self._pnmdata)
+
+            f = open(self._tmpfile, 'wb')
+            f.write(out)
+            f.close()
+
+            if p.returncode != 0:
                 raise RuntimeError("call to '" + command + "' returned status " + str(status))
-            f = open(self._tmpfile, 'r'+binary_flag)
+            f = open(self._tmpfile, 'rb')
             newbits = f.read()
             f.close()
             return newbits
         finally:
             if os.path.exists(self._tmpfile): os.unlink(self._tmpfile)
 
-
-#####################################################################
-##
-## This is a parser for Windows systems.  It relies on a
-## and the availability of the ImageMagic plus the Tbmp tools
-##
-## FIXME: 100% sure it's broken
-##
-class WindowsImageParser:
-    """Do it on Windows.  Ask Dirk Heiser <plucker@dirk-heiser.de> if
-    these tools goof up.  I cannot test it."""
-    def __del__ (self):
-        self.DeleteTempFiles(self._temp_files)
-
-
-
-    def __init__ (self, url, type, data, config, attribs, compress=1):
-        # The Result
-        self._doc = None
-        self._scaled = 0
-
-        #Init some variables
-        self._config = config
-        self._max_tbmp_size = config.get_int ('max_tbmp_size', SimpleImageMaxSize)
-        self._guess_tbmp_size = config.get_bool ('guess_tbmp_size', 1)
-        self._try_reduce_bpp = config.get_bool ('try_reduce_bpp', 1)
-        self._try_reduce_dimension = config.get_bool ('try_reduce_dimension', 1)
-        self._bpp = attribs.get('bpp')
-        self._type = type
-        self._verbose = config.get_int ('verbosity', 1)
-        self._imagemagick = "%s %s" % (self.quotestr(config.get_string ('convert_program','convert.exe')),config.get_string ('convert_program_parameter','%input% bmp:%output%'))
-        self._bmp2tbmp = "%s %s" % (self.quotestr(config.get_string ('bmp_to_tbmp', 'Bmp2Tbmp.exe')),config.get_string ('bmp_to_tbmp_parameter','-i=%input% -o=%output% -maxwidth=%maxwidth% -maxheight=%maxheight% -compress=%compress% -bpp=%colors%'))
-        if compress:
-            self._compress = self._config.get_bool('tbmp_compression', 0)
-        else:
-            self._compress = 0
-        maxwidth = attribs.get('maxwidth')
-        maxheight = attribs.get('maxheight')
-        if maxwidth == None:
-            self._maxwidth = config.get_int ('maxwidth', 150)
-        else:
-            self._maxwidth = int("%s" % maxwidth)
-        if maxheight == None:
-            self._maxheight = config.get_int ('maxheight', 150)
-        else:
-            self._maxheight = int("%s" % maxheight)
-        # Create Temp Files
-        self._temp_files = self.CreateTempFiles(3)
-        # Some globals
-        self._scale_step = 10          # Start with 100%, then 90% ...
-        self._org_width = 0            # There will be the orginal width of the input file later
-        self._org_height = 0           # There will be the orginal heifht of the input file later
-
-
-        # write the data to the in temp file
-        f = open (self._temp_files[0], "wb")
-        f.write (data)
-        f.close ()
-
-
-        self._org_width, self._org_height = self.convert_to_bmp(self._temp_files[0], self._temp_files[1])
-
-
-        if self._guess_tbmp_size == 0:
-            data = self.convert_to_Tbmp(self._temp_files[1], self._temp_files[2])
-            if self._try_reduce_bpp and (len(data) > self._max_tbmp_size):
-                while (len(data) > self._max_tbmp_size) and (self._bpp > 1):
-                    self._bpp = self._bpp / 2
-                    if self._verbose > 1:
-                        print "Bitmap to large, try with bpp: %s" % self._bpp
-                    data = self.convert_to_Tbmp(self._temp_files[1], self._temp_files[2])
-            if self._try_reduce_dimension and (len(data) > self._max_tbmp_size):
-                while (len(data) > self._max_tbmp_size) and (self._scale_step > 1):
-                    self._scale_step = self._scale_step - 1
-                    if self._verbose > 1:
-                        print "Bitmap to large, try with scale: %s%%" % (self._scale_step * 10)
-                    data = self.convert_to_Tbmp(self._temp_files[1], self._temp_files[2])
-        else:
-            if self._try_reduce_bpp:
-                guessed_size = self.fake_convert_to_Tbmp()
-                if self._verbose > 2:
-                    print "Guessed TBmp Size: %s Bytes" % guessed_size
-                while ( guessed_size > self._max_tbmp_size) and (self._bpp > 1):
-                    self._bpp = self._bpp / 2
-                    if self._verbose > 1:
-                        print "Bitmap to large, try with bpp: %s" % self._bpp
-                    guessed_size = self.fake_convert_to_Tbmp()
-                    if self._verbose > 2:
-                        print "Guessed TBmp Size: %s Bytes" % guessed_size
-            if self._try_reduce_dimension and (len(data) > self._max_tbmp_size):
-                guessed_size = self.fake_convert_to_Tbmp()
-                if self._verbose > 2:
-                    print "Guessed TBmp Size: %s Bytes" % guessed_size
-                while (guessed_size > self._max_tbmp_size) and (self._scale_step > 1):
-                    self._scale_step = self._scale_step - 1
-                    if self._verbose > 1:
-                        print "Bitmap to large, try with scale: %s%%" % (self._scale_step * 10)
-                    guessed_size = self.fake_convert_to_Tbmp()
-                    if self._verbose > 2:
-                        print "Guessed TBmp Size: %s Bytes" % guessed_size
-            data = self.convert_to_Tbmp(self._temp_files[1], self._temp_files[2])
-
-
-        if len(data) > self._max_tbmp_size:
-            raise RuntimeError, "\nImage too large (Size: %s, Maximum: %s)\n" % (len(data), self._max_tbmp_size)
-
-        if self._verbose > 2:
-            print "Resulting Tbmp Size: %s" % len(data)
-
-        self._doc = PluckerDocs.PluckerImageDocument (str (url), config)
-        self._doc.set_data (data)
-        size = (ord(data[0]) * 256 + ord(data[1]), ord(data[2]) * 256 + ord(data[3]))
-
-
-    def scale(self, width, height):
-        if (width > self._maxwidth) or (height > self._maxheight):
-            maxwidth = self._maxwidth
-            maxheight = self._maxheight
-        else:
-            maxwidth = width
-            maxheight = height
-
-        new_width = (float(self._scale_step) / 10) * maxwidth
-        new_height = (float(self._scale_step) / 10) * maxheight
-        if (int(new_width) == 0):
-            new_width = 1
-        if (int(new_height) == 0):
-            new_height = 1
-
-        return (int(new_width), int(new_height))
-
-
-
-    def scale_down(self, width, height, maxwidth, maxheight):
-        if width > maxwidth:
-            height = (height * maxwidth) / width
-            width = maxwidth;
-
-        if height > self._maxheight:
-            width = (width * maxheight) / height
-            height = maxheight;
-
-        return width, height
-
-
-
-    def calc_tbmp_size(self, width, height):
-        if operator.mod(width * (float(self._bpp) / 8), 2):
-            size = int(width * (float(self._bpp) / 8)) + 1
-        else:
-            size = int(width * (float(self._bpp) / 8))
-        if operator.mod(size, 2):
-            size = size + 1
-        size = (size * height) + 16
-        return size
-
-
-
-    def convert_to_bmp(self, input_filename, output_filename):
-        command = self.ReplaceVariables(self._imagemagick, input_filename, output_filename)
-        if self._verbose > 1:
-            print "Running %s" % command
-        if self._verbose < 2:
-            command = command + " > nul"
-        res = os.system (command)
-        if res:
-            raise RuntimeError, "\nCommand %s failed with code %d\n" % (command, res)
-
-        f = open (output_filename, "rb")
-        data = f.read ()
-        f.close ()
-
-        if len(data) < 26:
-            raise RuntimeError, "\nInvalid bitmap file\n"
-
-        width = (ord(data[21]) << 24) + (ord(data[20]) << 16) + (ord(data[19]) << 8) + ord(data[18])
-        height = (ord(data[25]) << 24) + (ord(data[24]) << 16) + (ord(data[23]) << 8) + ord(data[22])
-
-        if self._verbose > 2:
-            print "Original Bitmap Width: %s x %s" % (width, height)
-
-        return width, height
-
-
-
-    def fake_convert_to_Tbmp(self):
-        (maxwidth, maxheight) = self.scale(self._org_width, self._org_height)
-        (width, height) = self.scale_down(self._org_width, self._org_height, maxwidth, maxheight)
-        return self.calc_tbmp_size(width, height)
-
-
-
-    def convert_to_Tbmp(self, mid_name, out_name):
-        (maxwidth, maxheight) = self.scale(self._org_width, self._org_height)
-        command = self.ReplaceVariables(self._bmp2tbmp, mid_name, out_name, maxwidth, maxheight)
-        if self._verbose < 2:
-            command = command + " > nul"
-        if self._verbose > 1:
-            print "Running %s" % command
-        res = os.system (command)
-        if res:
-            raise RuntimeError, "\nCommand %s failed with code %d\n" % (command, res)
-
-        f = open (out_name, "rb")
-        tbmp_data = f.read ()
-        f.close ()
-
-        if len(tbmp_data) < 4:
-            raise RuntimeError, "\nInvalid tbmp file\n"
-
-        tbmp_width = (ord(tbmp_data[0]) << 8) + ord(tbmp_data[1])
-        tbmp_height = (ord(tbmp_data[2]) << 8) + ord(tbmp_data[3])
-
-        if self._verbose > 2:
-            print "TBmp Size: %sx%s" % (tbmp_width, tbmp_height)
-
-        if (self._org_width > self._maxwidth) or (self._org_height > self._maxheight):
-            self._scaled = 1
-            if self._verbose > 1:
-                print "Bitmap scaled down from %sx%s to %sx%s" % (self._org_width, self._org_height, tbmp_width, tbmp_height)
-
-        if self._verbose > 2:
-            print "TBmp Size: %s Bytes" % len(tbmp_data)
-
-        return tbmp_data
-
-
-
-    def quotestr(self, path):
-        out = string.strip(path)
-        if (string.find(out,' ') != -1) and (string.find(out,'"') == -1):
-            out = "\""+out+"\""
-        return out
-
-
-
-    def DeleteTempFiles(self, temp):
-        for x in range(len(temp)):
-            try:
-                if self._verbose > 2:
-                    print "Deleting Tempoary File: %s" % self._temp_files[x]
-                os.unlink (self._temp_files[x])
-            except:
-                if self._verbose > 2:
-                    print "   failed\n"
-                pass
-
-
-
-    def CreateTempFiles(self, count):
-        temp_filenames = []
-        ok = 1
-        for x in range(count):
-            try:
-                temp_filenames.append(tempfile.mktemp ())
-                f = open (temp_filenames[x], "wb")
-                f.write ("Tmp")
-                f.close ()
-                if self._verbose > 2:
-                    print "Creating Tempoary File: %s" % temp_filenames[x]
-            except:
-                ok = 0
-                if self._verbose > 2:
-                    print "Creating Tempoary File: %s   failed" % temp_filenames[x]
-        if not ok:
-            raise RuntimeError, "\nFailed to create the Tempoary files\n"
-        return temp_filenames
-
-
-
-    def ReplaceVariables(self, CommandLine, InputFile, OutputFile, maxwidth=0, maxheight=0):
-
-        if self._compress:
-            compress_str = self._config.get_string ('tbmp_compression_type','yes')
-        else:
-            compress_str = 'no'
-
-        Line = CommandLine
-        Line = string.replace (Line , '%compress%', compress_str)
-        Line = string.replace (Line , '%colors%', "%s" % self._bpp)
-        Line = string.replace (Line , '%maxwidth%', "%s" % maxwidth)
-        Line = string.replace (Line , '%maxheight%', "%s" % maxheight)
-        Line = string.replace (Line , '%input%', InputFile)
-        Line = string.replace (Line , '%output%', OutputFile)
-        return Line
-
-
-
-    def get_plucker_doc(self):
-        return self._doc
-
-
-
-    def scaled(self):
-        return self._scaled
-
-
-
+# TODO: Delete since we only have 1 parser at the moment
 def map_parser_name(name):
-    parser = string.lower (name)
-    if parser == "windows":
-        return WindowsImageParser
-    elif parser == "netpbm2":
+    parser = name.lower()
+    if parser == "netpbm2":
         return NewNetPBMImageParser
     else:
         return None
 
-
-if sys.platform == 'win32':
-    DefaultParser = WindowsImageParser
-else:
-    DefaultParser = map_parser_name(DEFAULT_IMAGE_PARSER_SETTING)
-
+DefaultParser = map_parser_name(DEFAULT_IMAGE_PARSER_SETTING)
 
 def get_default_parser (config):
     parser = config.get_string ('image_parser')
@@ -828,4 +530,4 @@ def get_default_parser (config):
 
 if __name__ == '__main__':
     # Called as a script
-    print "This file currently does nothing when called as a script"
+    print("This file currently does nothing when called as a script")

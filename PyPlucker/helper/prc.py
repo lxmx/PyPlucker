@@ -84,12 +84,14 @@ __copyright__ = 'Copyright 1998-1999 Rob Tillotson <robt@debian.org>'
 
 import sys, os, stat, struct
 
+from itertools import zip_longest
+
 PI_HDR_SIZE = 78
 PI_RESOURCE_ENT_SIZE = 10
 PI_RECORD_ENT_SIZE = 8
 PI_MAX_DOC_NAME_SIZE = 31
 
-PILOT_TIME_DELTA = 2082844800L
+PILOT_TIME_DELTA = 2082844800
 
 flagResource = 0x0001
 flagReadOnly = 0x0002
@@ -187,13 +189,13 @@ class OFile:
         # a simple slurp...
         data = f.read()
 
-        if len(data) < PI_HDR_SIZE: raise IOError, 'file too short'
+        if len(data) < PI_HDR_SIZE: raise IOError('file too short')
         (name, flags, ver, ctime, mtime, btime, mnum, appinfo, sortinfo,
          type, creator, uid, nextrec, numrec) \
          = struct.unpack('>32shhLLLlll4s4sllh', data[:PI_HDR_SIZE])
 
         if nextrec or appinfo < 0 or sortinfo < 0 or numrec < 0:
-            raise IOError, 'invalid database header'
+            raise IOError('invalid database header')
 
         if ctime: ctime = ctime - PILOT_TIME_DELTA,
         if mtime: mtime = btime - PILOT_TIME_DELTA,
@@ -233,7 +235,7 @@ class OFile:
             hstr = data[pos:pos+s]
             pos = pos + s
             if not hstr or len(hstr) < s:
-                raise IOError, 'bad database header'
+                raise IOError('bad database header')
 
             if rsrc:
                 (typ, id, offset) = struct.unpack('>4shl', hstr)
@@ -248,10 +250,10 @@ class OFile:
         entries.reverse()
         for of, q, id in entries:
             size = offset - of
-            if size < 0: raise IOError, 'bad pdb/prc record entry (size < 0)'
+            if size < 0: raise IOError('bad pdb/prc record entry (size < 0)')
             d = data[of:offset]
             offset = of
-            if len(d) != size: raise IOError, 'failed to read record'
+            if len(d) != size: raise IOError('failed to read record')
             if rsrc:
                 self.records.append( [id, q, d] )
                 self.resource_types.append( (q, id) ) # tuple, so it is immutable/hashable
@@ -275,17 +277,17 @@ class OFile:
             appinfo_size = 0
 
         if appinfo_size < 0 or sortinfo_size < 0:
-            raise IOError, 'bad database header (appinfo or sortinfo size < 0)'
+            raise IOError('bad database header (appinfo or sortinfo size < 0)')
 
         if appinfo_size:
             self.appinfo = data[appinfo:appinfo+appinfo_size]
             if len(self.appinfo) != appinfo_size:
-                raise IOError, 'failed to read appinfo block'
+                raise IOError('failed to read appinfo block')
 
         if sortinfo_size:
             self.sortinfo = data[sortinfo:sortinfo+sortinfo_size]
             if len(self.sortinfo) != sortinfo_size:
-                raise IOError, 'failed to read sortinfo block'
+                raise IOError('failed to read sortinfo block')
 
     def barf(self, f):
         """Dump the cache to a file.
@@ -315,11 +317,11 @@ class OFile:
 
 
         info = self.info
-        creattime = info.get('createDate',0L)
+        creattime = info.get('createDate',0)
         if creattime: creattime = creattime + PILOT_TIME_DELTA
-        modtime = info.get('modifyDate',0L)
+        modtime = info.get('modifyDate',0)
         if modtime: modtime = modtime + PILOT_TIME_DELTA
-        backtime = info.get('backupDate',0L)
+        backtime = info.get('backupDate',0)
         if backtime: backtime = backtime + PILOT_TIME_DELTA
         hdr = struct.pack('>32shhLLLlll4s4sllh',
                           pad_null(info.get('name',''), 32),
@@ -363,14 +365,14 @@ class OFile:
         file_length = os.stat(self.filename)[6]
         hstr = self.f.read(PI_HDR_SIZE)
         if not hstr or len(hstr) < PI_HDR_SIZE:
-            raise IOError, 'prc/pdb header too short'
+            raise IOError('prc/pdb header too short')
 
         (name, flags, ver, ctime, mtime, btime, mnum, appinfo, sortinfo,
          type, creator, uid, nextrec, numrec) \
          = struct.unpack('>32shhLLLlll4s4sllh', hstr)
 
         if nextrec or appinfo < 0 or sortinfo < 0 or numrec < 0:
-            raise IOError, 'invalid prc/pdb header'
+            raise IOError('invalid prc/pdb header')
 
         self.info = {
             'name': null_terminated(name),
@@ -405,7 +407,7 @@ class OFile:
         for x in range(0,numrec):
             hstr = self.f.read(s)
             if not hstr or len(hstr) < s:
-                raise IOError, 'bad prc/pdb header'
+                raise IOError('bad prc/pdb header')
 
             if rsrc:
                 (typ, id, offset) = struct.unpack('>lhl', hstr)
@@ -421,11 +423,11 @@ class OFile:
         entries.reverse()
         for of, q, id in entries:
             size = offset - of
-            if size < 0: raise IOError, 'bad pdb/prc record entry (size < 0)'
+            if size < 0: raise IOError('bad pdb/prc record entry (size < 0)')
             offset = of
             self.f.seek(of)
             d = self.f.read(size)
-            if len(d) != size: raise IOError, 'failed to read record'
+            if len(d) != size: raise IOError('failed to read record')
             self.records.append( [id, q, d] )
 
         self.records.reverse()
@@ -443,19 +445,19 @@ class OFile:
             appinfo_size = 0
 
         if appinfo_size < 0 or sortinfo_size < 0:
-            raise IOError, 'bad pdb/prc header (appinfo or sortinfo size < 0)'
+            raise IOError('bad pdb/prc header (appinfo or sortinfo size < 0)')
 
         if appinfo_size:
             self.f.seek(appinfo)
             self.appinfo = self.f.read(appinfo_size)
             if len(self.appinfo) != appinfo_size:
-                raise IOError, 'failed to read appinfo block'
+                raise IOError('failed to read appinfo block')
 
         if sortinfo_size:
             self.f.seek(sortinfo)
             self.sortinfo = self.f.read(sortinfo_size)
             if len(self.sortinfo) != sortinfo_size:
-                raise IOError, 'failed to read sortinfo block'
+                raise IOError('failed to read sortinfo block')
 
 
     # pi-file API
@@ -534,18 +536,18 @@ class OFile:
         return id
 
     def getNextRecord(self, cat):
-        while self.next < len(self.records):
-            (id, attr, c, data) = self.records[self.next]
-            i = self.next
+        while self.__next__ < len(self.records):
+            (id, attr, c, data) = self.records[self.__next__]
+            i = self.__next__
             self.next = self.next + 1
             if c == cat:
                 return (data, i, id, attr, c)
         return ''
 
     def getNextModRecord(self, cat=-1):
-        while self.next < len(self.records):
-            (id, attr, c, data) = self.records[self.next]
-            i = self.next
+        while self.__next__ < len(self.records):
+            (id, attr, c, data) = self.records[self.__next__]
+            i = self.__next__
             self.next = self.next + 1
             if (attr & attrModified) and (cat < 0 or c == cat):
                 return (data, i, id, attr, c)
@@ -600,10 +602,10 @@ class OFile:
         self.dirty = 1
 
     def deleteCategory(self, cat):
-        raise RuntimeError, 'unimplemented'
+        raise RuntimeError('unimplemented')
 
     def purge(self):
-        self.records = filter(lambda x: not (x[1] & attrDeleted), self.records)
+        self.records = [x for x in self.records if not (x[1] & attrDeleted)]
         self.dirty = 1
 
     def resetNext(self):
@@ -724,18 +726,18 @@ class PCache:
         return id
 
     def getNextRecord(self, cat):
-        while self.next < len(self.data):
-            r = self.data[self.next]
-            i = self.next
+        while self.__next__ < len(self.data):
+            r = self.data[self.__next__]
+            i = self.__next__
             self.next = self.next + 1
             if r.category == cat:
                 return r.raw, i, r.id, r.attr, r.category
         return ''
 
     def getNextModRecord(self, cat=-1):
-        while self.next < len(self.data):
-            r = self.data[self.next]
-            i = self.next
+        while self.__next__ < len(self.data):
+            r = self.data[self.__next__]
+            i = self.__next__
             self.next = self.next + 1
             if (r.attr & attrModified) and (cat < 0 or r.category == cat):
                 return r.raw, i, r.id, r.attr, r.category
@@ -764,7 +766,7 @@ class PCache:
         self.dirty = 1
 
     def getRecordIDs(self, sort=0):
-        m = map(lambda x: x.id, self.data)
+        m = [x.id for x in self.data]
         if sort: m.sort()
         return m
 
@@ -775,7 +777,7 @@ class PCache:
         self.dirty = 1
 
     def deleteCategory(self, cat):
-        raise RuntimeError, 'unimplemented'
+        raise RuntimeError('unimplemented')
 
     def purge(self):
         ndata = []
@@ -823,13 +825,13 @@ class File(PCache):
 
     def unpack(self, data):
 
-        if len(data) < PI_HDR_SIZE: raise IOError, 'file too short'
+        if len(data) < PI_HDR_SIZE: raise IOError('file too short')
         (name, flags, ver, ctime, mtime, btime, mnum, appinfo, sortinfo,
          typ, creator, uid, nextrec, numrec) \
          = struct.unpack('>32shhLLLlll4s4sllh', data[:PI_HDR_SIZE])
 
         if nextrec or appinfo < 0 or sortinfo < 0 or numrec < 0:
-            raise IOError, 'invalid database header'
+            raise IOError('invalid database header')
 
         self.info = {
             'name': null_terminated(name),
@@ -865,7 +867,7 @@ class File(PCache):
             hstr = data[pos:pos+s]
             pos = pos + s
             if not hstr or len(hstr) < s:
-                raise IOError, 'bad database header'
+                raise IOError('bad database header')
 
             if rsrc:
                 (typ, id, offset) = struct.unpack('>4shl', hstr)
@@ -880,10 +882,10 @@ class File(PCache):
         entries.reverse()
         for of, q, id in entries:
             size = offset - of
-            if size < 0: raise IOError, 'bad pdb/prc record entry (size < 0)'
+            if size < 0: raise IOError('bad pdb/prc record entry (size < 0)')
             d = data[of:offset]
             offset = of
-            if len(d) != size: raise IOError, 'failed to read record'
+            if len(d) != size: raise IOError('failed to read record')
             if rsrc:
                 r = PResource(q, id, d)
                 self.data.append(r)
@@ -905,17 +907,17 @@ class File(PCache):
             appinfo_size = 0
 
         if appinfo_size < 0 or sortinfo_size < 0:
-            raise IOError, 'bad database header (appinfo or sortinfo size < 0)'
+            raise IOError('bad database header (appinfo or sortinfo size < 0)')
 
         if appinfo_size:
             self.appblock = data[appinfo:appinfo+appinfo_size]
             if len(self.appblock) != appinfo_size:
-                raise IOError, 'failed to read appinfo block'
+                raise IOError('failed to read appinfo block')
 
         if sortinfo_size:
             self.sortblock = data[sortinfo:sortinfo+sortinfo_size]
             if len(self.sortblock) != sortinfo_size:
-                raise IOError, 'failed to read sortinfo block'
+                raise IOError('failed to read sortinfo block')
 
     def save(self, f):
         """Dump the cache to a file.
@@ -964,43 +966,35 @@ class File(PCache):
         if info.get('flagLaunchableData',0): flg = flg | flagLaunchableData
         # excludefromsync doesn't actually get stored?
         name = info.get('name', '')
-        if "_jython" in sys.builtin_module_names:
-            import string
-            # work around bug in Jython implementation of struct.pack
-            nameparts = []
-            while name:
-                partlen = min(len(name),8)
-                nameparts.append(struct.pack('>8s', name[:partlen]))
-                name = name[partlen:]
-            packed_name = string.join(nameparts, '')
-            if len(packed_name) < 32:
-                packed_name = packed_name + (32-len(packed_name))*'\0'
-            elif len(packed_name) > 31:
-                packed_name = packed_name[:31] + '\0'
-        else:
-            nameval = (len(name) > 31 and (name[:31] + '0')) or name
-            packed_name = struct.pack('>32s', name)
-        hdr = packed_name + struct.pack('>hhLLLlll4s4sllh',
-                                        flg,
-                                        info.get('version',0),
-                                        info.get('createDate',0L)+PILOT_TIME_DELTA,
-                                        info.get('modifyDate',0L)+PILOT_TIME_DELTA,
-                                        info.get('backupDate',0L)+PILOT_TIME_DELTA,
-                                        info.get('modnum',0),
-                                        appinfo_offset, # appinfo
-                                        sortinfo_offset, # sortinfo
-                                        info.get('type','    '),
-                                        info.get('creator','    '),
-                                        0, # uid???
-                                        0, # nextrec???
-                                        len(self.data))
+
+        nameval = (len(name) > 31 and (name[:31] + '0')) or name
+
+        s = struct.Struct(b'32s')
+        packed_name = s.pack(name.encode('latin-1'))
+
+        s = struct.Struct(b'>hhLLLlll4s4sllh')
+
+        hdr = packed_name + s.pack(flg,
+                                   info.get('version',0),
+                                   info.get('createDate',0)+PILOT_TIME_DELTA,
+                                   info.get('modifyDate',0)+PILOT_TIME_DELTA,
+                                   info.get('backupDate',0)+PILOT_TIME_DELTA,
+                                   info.get('modnum',0),
+                                   appinfo_offset, # appinfo
+                                   sortinfo_offset, # sortinfo
+                                   info.get('type','    ').encode('latin-1'),
+                                   info.get('creator','    ').encode('latin-1'),
+                                   0, # uid???
+                                   0, # nextrec???
+                                   len(self.data))
 
         f.write(hdr)
 
         entries = []
         record_data = []
         rsrc = self.info.get('flagResource')
-        for x, off in map(None, self.data, rec_offsets):
+
+        for x, off in zip_longest(self.data, rec_offsets):
             if rsrc:
                 record_data.append(x.raw)
                 entries.append(struct.pack('>4shl', x.type, x.id, off))
@@ -1011,8 +1005,9 @@ class File(PCache):
 
         for x in entries: f.write(x)
         # Two bytes padding (if the PDB come from the Pilot the padding are also there)
-        f.write(chr(0)+chr(0))
-        f.write(self.appblock)
-        f.write(self.sortblock)
-        for x in record_data: f.write(x)
+        f.write((chr(0)+chr(0)).encode('latin-1'))
+        f.write(self.appblock.encode('latin-1'))
+        f.write(self.sortblock.encode('latin-1'))
+        for x in record_data:
+            f.write(x)
         f.flush()

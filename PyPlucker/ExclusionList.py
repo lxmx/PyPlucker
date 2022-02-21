@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 """
 ExclusionList.py   $Id: ExclusionList.py,v 1.8 2005/04/04 01:46:07 chrish Exp $
@@ -64,7 +64,7 @@ class ExclusionList:
                 action = m.group (2) == '+'
                 regexp = m.group (3)
                 new_item = (action, regexp)
-                if self._items.has_key (prio):
+                if prio in self._items:
                     self._items[prio].append (new_item)
                 else:
                     self._items[prio] = [new_item]
@@ -80,7 +80,7 @@ class ExclusionList:
             action = m.group (2) == '+'
             regexp = m.group (3)
             new_item = (action, regexp)
-            if self._items.has_key (prio):
+            if prio in self._items:
                 self._items[prio].append (new_item)
             else:
                 self._items[prio] = [new_item]
@@ -90,7 +90,7 @@ class ExclusionList:
         """Check if 'url' is to be included (result=1) or excluded
         (result=0)."""
 
-        prios = self._items.keys ()
+        prios = list(self._items.keys ())
         prios.sort ()
         prios.reverse ()
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 """
 ConfigFiles.py   $Id: ConfigFiles.py,v 1.9 2002/05/18 10:28:24 nordstrom Exp $
@@ -10,13 +10,14 @@ Copyright 2000 by Holger Duerer <holly@starship.python.net>
 Distributable under the GNU General Public License Version 2 or newer.
 """
 
-import os, sys, types, string, ConfigParser
+import os, sys, types, string, configparser
 import PyPlucker
+from functools import reduce
 
 
 
 SYS_CONFIG_FILE = os.path.join (PyPlucker.lib_dir, PyPlucker._SYS_CONFIGFILE_NAME)
-if os.environ.has_key ('HOME'):
+if 'HOME' in os.environ:
     USER_CONFIG_FILE = os.path.join (os.environ["HOME"], PyPlucker._USER_CONFIGFILE_NAME)
 else:
     # should not happen, but what's it like on those lesser operating systems?
@@ -86,13 +87,13 @@ class Configuration:
             self._configs.reverse ()
 
             try:
-                c = ConfigParser.ConfigParser ()
+                c = configparser.ConfigParser ()
                 c.read (filename)
 
                 for section in self._sections:
                     if c.has_section (section):
                         self._configs.append (_ConfigGetter (c, section))
-            except ConfigParser.Error, text:
+            except configparser.Error as text:
                 if error_logger is not None:
                     error_logger ("Error parsing config file '%s': %s" % (filename, text))
                 pass
@@ -102,9 +103,9 @@ class Configuration:
 
 
     def _get_string (self, option):
-        if self._dict.has_key (option):
+        if option in self._dict:
             return self._dict[option]
-        aList = map (lambda x, o=option: x.get_string (o), self._configs)
+        aList = list(map (lambda x, o=option: x.get_string (o), self._configs))
         result = reduce (lambda a, b: a or b, aList, None)
         return result
 
@@ -114,7 +115,7 @@ class Configuration:
 
     def get_string (self, option, default=None):
         if not (default is None):
-            assert (type(default) == types.StringType)
+            assert (type(default) == str)
         result = self._get_string(option)
         if result is None:
             return default
@@ -124,8 +125,8 @@ class Configuration:
 
     def get_int (self, option, default=None):
         if not (default is None):
-            assert (type(default) == types.IntType or type(default) == types.LongType)
-        if self._dict.has_key (option):
+            assert (type(default) == int or type(default) == int)
+        if option in self._dict:
             return int (self._dict[option])
         result = self._get_string (option)
         if result is None:
@@ -141,7 +142,7 @@ class Configuration:
                 return None
             else:
                 res = default
-        if type (res) == types.StringType:
+        if type (res) == bytes:
             res = string.lower (res)
         if res == 1 or res == "1" or res == "y" or res == "yes" or res == "true" or res == "on":
             return 1

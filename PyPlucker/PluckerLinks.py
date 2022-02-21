@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 """
 Links.py   $Id: PluckerLinks.py,v 1.5 2002/05/18 10:28:24 nordstrom Exp $
 
@@ -56,7 +56,7 @@ class Links:
         idx = []
 
         mapping = self._mapping.get_mapping()
-        for i in mapping.keys ():
+        for i in list(mapping.keys ()):
             if i[:7] != "mailto:":
                 rev[mapping[i]] = i
 
@@ -65,7 +65,7 @@ class Links:
             i = 0
             max = min (last_id - count + 1, 200)
             while (i < max):
-                if rev.has_key(i + count):
+                if i + count in rev:
                     data.append (rev[i + count])
                 data.append ("\000")
                 i = i + 1

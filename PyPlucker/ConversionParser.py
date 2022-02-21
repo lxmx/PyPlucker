@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 """
 ConversionParser.py   $Id: ConversionParser.py,v 1.5 2004/10/20 01:44:53 chrish Exp $
@@ -12,7 +12,7 @@ Provides methods to wrap external convertors to return PluckerTextDocuments
 
 import os, sys, string, tempfile
 from PyPlucker import TextParser
-from UtilFns import message, error
+from .UtilFns import message, error
 
 def WordParser (url, data, headers, config, attributes):
     """Convert a Word document to HTML and returns a PluckerTextDocument"""
@@ -35,7 +35,7 @@ def WordParser (url, data, headers, config, attributes):
             file = open (tempdoc, "wb")
             file.write (data)
             file.close ()
-        except IOError, text:
+        except IOError as text:
             message(0, "Error saving temporary file %s" % tempdoc)
             os.unlink(tempdoc)
             return None
@@ -72,7 +72,7 @@ def WordParser (url, data, headers, config, attributes):
             finally:
                 os.unlink(tempdoc)
                 os.unlink(temphtml)
-        except IOError, text:
+        except IOError as text:
             message(0, "Error reading temporary file %s" % temphtml)
             return None
 

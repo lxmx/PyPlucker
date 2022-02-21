@@ -56,7 +56,7 @@ localedir = prefix + '/share/locale'
 
 lang = []
 for env in 'LANGUAGE', 'LC_ALL', 'LC_MESSAGES', 'LANG':
-        if os.environ.has_key(env):
+        if env in os.environ:
                 lang = string.split(os.environ[env], ':')
                 break
 for l in lang:
@@ -70,7 +70,7 @@ for l in lang:
 if 'C' not in lang:
         lang.append('C')
 
-if os.environ.has_key('PY_XGETTEXT'):
+if 'PY_XGETTEXT' in os.environ:
         xgettext = os.environ['PY_XGETTEXT']
 else:
         xgettext = None
@@ -94,6 +94,7 @@ def _getpos(levels = 0):
         """Returns the position in the code where the function was called.
         The function uses some knowledge about python stack frames."""
         import sys
+import atexit
         # get access to the stack frame by generating an exception.
         try:
                 raise RuntimeError
@@ -130,7 +131,7 @@ class Catalog:
 
                 if _lsbStrToInt(buffer[:4]) != 0x950412de:
                         # magic number doesn't match
-                        raise error, 'Bad magic number in %s' % (catalog,)
+                        raise error('Bad magic number in %s' % (catalog,))
 
                 self.revision = _lsbStrToInt(buffer[4:8])
                 nstrings = _lsbStrToInt(buffer[8:12])
@@ -155,7 +156,7 @@ class Catalog:
 
         def gettext(self, string):
                 """Get the translation of a given string"""
-                if self.cat.has_key(string):
+                if string in self.cat:
                         return self.cat[string]
                 else:
                         return string
@@ -172,14 +173,14 @@ class Catalog:
                 try:
                         f = open(file, "wb")
                 except IOError:
-                        raise error, "can't open " + file + " for writing"
+                        raise error("can't open " + file + " for writing")
                 f.write(_intToLsbStr(0x950412de))    # magic number
                 f.write(_intToLsbStr(0))             # revision
                 f.write(_intToLsbStr(len(self.cat))) # nstrings
 
                 oIndex = []; oData = ''
                 tIndex = []; tData = ''
-                for orig, trans in self.cat.items():
+                for orig, trans in list(self.cat.items()):
                         oIndex.append((len(orig), len(oData)))
                         oData = oData + orig + '\0'
                         tIndex.append((len(trans), len(tData)))
@@ -212,7 +213,7 @@ if xgettext:
                         # there is always one level of redirection for calls
                         # to this function
                         pos = _getpos(2) # get this function's caller
-                        if self._strings.has_key(string):
+                        if string in self._strings:
                                 if pos not in self._strings[string]:
                                         self._strings[string].append(pos)
                         else:
@@ -227,9 +228,8 @@ if xgettext:
                 def output(self, fp):
                         import string
                         fp.write('# POT file for domain %s\n' % (self.domain,))
-                        for str in self._strings.keys():
-                                pos = map(lambda x: "%s(%s):%d" % x,
-                                          self._strings[str])
+                        for str in list(self._strings.keys()):
+                                pos = ["%s(%s):%d" % x for x in self._strings[str]]
                                 pos.sort()
                                 length = 80
                                 for p in pos:
@@ -243,9 +243,7 @@ if xgettext:
                                 if '\n' in str:
                                         fp.write('msgid ""\n')
                                         lines = string.split(str, '\n')
-                                        lines = map(lambda x:
-                                                    '"%s\\n"\n' % (x,),
-                                                    lines[:-1]) + \
+                                        lines = ['"%s\\n"\n' % (x,) for x in lines[:-1]] + \
                                                     ['"%s"\n' % (lines[-1],)]
                                         fp.writelines(lines)
                                 else:
@@ -260,29 +258,29 @@ if xgettext:
         def exitfunc(dir=xgettext, _exitchain=_exitchain):
                 # actually output all the .pot files.
                 import os
-                for file in _cats.keys():
+                for file in list(_cats.keys()):
                         fp = open(os.path.join(dir, file + '.pot'), 'w')
                         cat = _cats[file]
                         cat.output(fp)
                         fp.close()
                 if _exitchain: _exitchain()
-        sys.exitfunc = exitfunc
+        atexit.register(exitfunc)
         del sys, exitfunc, _exitchain, xgettext
 
 def bindtextdomain(domain, localedir=localedir):
         global _cat
-        if not _cats.has_key(domain):
+        if domain not in _cats:
                 _cats[domain] = Catalog(domain, localedir)
         if not _cat: _cat = _cats[domain]
 
 def textdomain(domain):
         global _cat
-        if not _cats.has_key(domain):
+        if domain not in _cats:
                 _cats[domain] = Catalog(domain)
         _cat = _cats[domain]
 
 def gettext(string):
-        if _cat == None: raise error, "No catalog loaded"
+        if _cat == None: raise error("No catalog loaded")
         return _cat.gettext(string)
 
 _ = gettext
@@ -290,15 +288,15 @@ _ = gettext
 def dgettext(domain, string):
         if domain is None:
                 return gettext(string)
-        if not _cats.has_key(domain):
-                raise error, "Domain '" + domain + "' not loaded"
+        if domain not in _cats:
+                raise error("Domain '" + domain + "' not loaded")
         return _cats[domain].gettext(string)
 
 def test():
         import sys
         global localedir
         if len(sys.argv) not in (2, 3):
-                print "Usage: %s DOMAIN [LOCALEDIR]" % (sys.argv[0],)
+                print("Usage: %s DOMAIN [LOCALEDIR]" % (sys.argv[0],))
                 sys.exit(1)
         domain = sys.argv[1]
         if len(sys.argv) == 3:
@@ -306,10 +304,10 @@ def test():
         textdomain(domain)
         info = gettext('')  # this is where special info is often stored
         if info:
-                print "Info for domain %s, lang %s." % (domain, _cat.lang)
-                print info
+                print("Info for domain %s, lang %s." % (domain, _cat.lang))
+                print(info)
         else:
-                print "No info given in mo file."
+                print("No info given in mo file.")
 
 if __name__ == '__main__':
         test()

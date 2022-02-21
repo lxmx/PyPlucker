@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 """
 CharsetMapping.py   $Id: CharsetMapping.py,v 1.5 2002/05/18 10:28:24 nordstrom Exp $
@@ -1067,22 +1067,22 @@ MIBenumNames = {
 def charset_name_to_mibenum(name):
     if name is None or type(name) != type(''):
         return None
-    name = string.lower(name)
+    name = name.lower()
     if re.match('^[0-9]+$', name):
         return int(name)
-    elif NamedCharsets.has_key(name):
+    elif name in NamedCharsets:
         return NamedCharsets[name] & 0xFFFF
     else:
         return None
 
 def charset_mibenum_to_name(mibenum):
-    return MIBenumNames.has_key(mibenum) and MIBenumNames[mibenum]
+    return mibenum in MIBenumNames and MIBenumNames[mibenum]
 
 def charset_known_name (name):
-    return type(name) == type('') and string.lower(name) in NamedCharsets.keys()
+    return type(name) == type('') and name.lower() in list(NamedCharsets.keys())
 
 def charset_known_names ():
-    return NamedCharsets.keys()
+    return list(NamedCharsets.keys())
 
 
 if __name__ == '__main__':
@@ -1112,8 +1112,8 @@ if __name__ == '__main__':
 
     # Called as a script
     if len(sys.argv) != 2:
-        print "Usage: %s <MIBenum textfile>" % sys.argv[0]
-        print "  Example: %s character-sets.txt > arrays.txt" % sys.argv[0]
+        print("Usage: %s <MIBenum textfile>" % sys.argv[0])
+        print("  Example: %s character-sets.txt > arrays.txt" % sys.argv[0])
     else:
         #Read and parse the file an put the result to ENTRYS
         IN_BODY = 0
@@ -1172,10 +1172,10 @@ if __name__ == '__main__':
                             MAX_NAME_LENGTH = len(match.group(1))
                     match = re.search(r"^MIBenum\: {1,10}(\d*?)(?: |\t){0,5}$", line)
                     if match:
-                        MIBENUM = string.atoi(match.group(1))
+                        MIBENUM = match.group(1).atoi()
                     match = re.search(r"^Alias\: {1,10}(.*?)(?: |\t){0,100}(\(preferred MIME name\)){0,1}(?: |\t){0,5}$", line)
                     if match:
-                        if (string.upper(match.group(1)) != "NONE") and (len(match.group(1))>0):
+                        if (match.group(1).upper() != "NONE") and (len(match.group(1))>0):
                             NAMES.append(match.group(1))
                             if len(match.group(1)) > MAX_NAME_LENGTH:
                                 MAX_NAME_LENGTH = len(match.group(1))
@@ -1189,33 +1189,33 @@ if __name__ == '__main__':
         f.close ()
         sys.stderr.write("Done! Found %d Charsets\n" % len(ENTRYS))
 
-        print "\n"
+        print("\n")
 
         sys.stderr.write("Create \"NamedCharsets\" Array...\n")
         #Now write the first array (NamedCharsets)
-        print "NamedCharsets = {"
+        print("NamedCharsets = {")
         for PAIR in ADDITIONAL:
-            print "\t\t  '%s'%s: %4d," % (string.lower(PAIR[0]), \
+            print("\t\t  '%s'%s: %4d," % (PAIR[0].lower(), \
                                         " "*(MAX_NAME_LENGTH-len(PAIR[0])), \
                                         #"\t\t", \
-                                        PAIR[1])
+                                        PAIR[1]))
         for ENTRY in ENTRYS:
             for NAME in ENTRY[2]:
-                print "\t\t  '%s'%s: %4d," % (string.lower(NAME), \
+                print("\t\t  '%s'%s: %4d," % (NAME.lower(), \
                                             " "*(MAX_NAME_LENGTH-len(NAME)), \
                                             #"\t\t", \
-                                            ENTRY[0])
-        print "\t\t}"
+                                            ENTRY[0]))
+        print("\t\t}")
 
-        print "\n\n\n"
+        print("\n\n\n")
 
         sys.stderr.write("Create \"MIBenumNames\" Array...\n")
         #Now write the second array (MIBenumNames)
-        print "MIBenumNames = {"
+        print("MIBenumNames = {")
         for ENTRY in ENTRYS:
-            print "\t\t  %4d : '%s'," % (ENTRY[0], ENTRY[2][ENTRY[1]])
-        print "\t       }"
+            print("\t\t  %4d : '%s'," % (ENTRY[0], ENTRY[2][ENTRY[1]]))
+        print("\t       }")
 
-        print "\n"
+        print("\n")
 
         sys.stderr.write("All done!\n")

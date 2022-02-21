@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 """
 Parser.py   $Id: Parser.py,v 1.22 2005/01/12 01:47:16 chrish Exp $
@@ -11,7 +11,7 @@ Distributable under the GNU General Public License Version 2 or newer.
 
 from PyPlucker import TextParser, ImageParser, PluckerDocs, ConversionParser
 from PyPlucker.ConversionParser import WordParser
-from UtilFns import message, error
+from .UtilFns import message, error
 
 unknown_things = {}
 
@@ -19,15 +19,15 @@ unknown_things = {}
 def generic_parser (url, headers, data, config, attributes):
     try:
         url = str (url) # convert to string if this is still a Url.ULR
-        type = headers['content-type']
+        type = headers['Content-Type']
         verbosity = config.get_int('verbosity', 1)
-        if type == 'unknown/unknown' and attributes.has_key('type'):
+        if type == 'unknown/unknown' and 'type' in attributes:
             # note that this type is not an HTTP header, and may not contain parameters
             type = attributes['type']
         if type == "text/html":
             parser = TextParser.StructuredHTMLParser (url, data, headers, config, attributes)
             for item in parser.get_unknown ():
-                if unknown_things.has_key (item):
+                if item in unknown_things:
                     unknown_things[item].append (url)
                 else:
                     unknown_things[item] = [url]
@@ -51,10 +51,10 @@ def generic_parser (url, headers, data, config, attributes):
         else:
             message(0, "%s type not yet handled (%s)" % (type, url))
             return None
-    except RuntimeError, text:
+    except RuntimeError as text:
         error("Runtime error parsing document %s: %s" % (url, text))
         return None
-    except AssertionError, text:
+    except AssertionError as text:
         error("Assertion error parsing document %s: %s" % (url, text))
         return None
     except:

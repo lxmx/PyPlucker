@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #  -*- mode: python; indent-tabs-mode: nil; -*-
 
 """
@@ -23,7 +23,7 @@ if __name__ == '__main__':
         sys.path = [os.path.split (os.path.dirname (file))[0]] + sys.path
         try: import PyPlucker
         except ImportError:
-            print "Cannot find where module PyPlucker is located!"
+            print("Cannot find where module PyPlucker is located!")
             sys.exit (1)
 
         # and forget the temp names...
@@ -186,12 +186,12 @@ def get_domain_from_host(url_addy):
     if 'localhost' == url_addy:
         return url_addy
     url_len = len(url_addy)
-    first_dot = string.rfind(url_addy, ".")
+    first_dot = url_addy.rfind(".")
     if first_dot < 1:
         return ""
     temp_url = url_addy[0:first_dot]
     # Locate second-from-right period, from front...
-    second_dot = string.rfind(temp_url, ".")
+    second_dot = temp_url.rfind(".")
     if second_dot > 1:
         # have a second dot, so output this to end...
         second_dot = second_dot + 1
@@ -201,16 +201,16 @@ def get_domain_from_host(url_addy):
         return(url_addy)
 
 
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
-class URLopener(urllib.FancyURLopener):
+class URLopener(urllib.request.FancyURLopener):
     def __init__(self, *args):
-        urllib.FancyURLopener.__init__(self, *args)
+        urllib.request.FancyURLopener.__init__(self, *args)
         self.errcode = 200
 
     def http_error_default(self, url, fp, errcode, errmsg, headers):
         self.errcode = errcode
-        return urllib.FancyURLopener.http_error_default(self, url, fp, errcode,
+        return urllib.request.FancyURLopener.http_error_default(self, url, fp, errcode,
                                                         errmsg, headers)
 
 
@@ -236,7 +236,7 @@ class SpiderLink:
         self._bpp = 1
         self._url_pattern = None
         old = dict.copy()
-        for key in old.keys():
+        for key in list(old.keys()):
             if not key in VALID_LINK_ATTRIBUTES:
                 message(2, "Ignoring invalid link attribute '%s'", key)
                 del old[key]
@@ -274,19 +274,19 @@ class SpiderLink:
 
 
         # POST processing
-        if dict.has_key ('post'):
+        if 'post' in dict:
             self.set_post (dict['post'])
 
         # MAXWIDTH processing
-        if dict.has_key ('maxwidth'):
+        if 'maxwidth' in dict:
             self.set_maxwidth (dict['maxwidth'])
 
         # MAXHEIGHT processing
-        if dict.has_key ('maxheight'):
+        if 'maxheight' in dict:
             self.set_maxheight (dict['maxheight'])
 
         # BPP processing
-        if dict.has_key ('bpp'):
+        if 'bpp' in dict:
             bpp = dict['bpp']
             try:
                 bpp = int (bpp)
@@ -295,7 +295,7 @@ class SpiderLink:
                 pass
 
         # MAXDEPTH processing
-        if dict.has_key ('maxdepth'):
+        if 'maxdepth' in dict:
             if after_taken:
                 self.set_max_depth (int (dict['maxdepth']))
                 self.set_current_depth (1)
@@ -303,24 +303,24 @@ class SpiderLink:
                 self._new_max_depth = int (dict['maxdepth'])
 
         # NOIMAGES processing
-        if dict.has_key ('noimages'):
+        if 'noimages' in dict:
             self.set_bpp (0)
 
         # STAYONHOST processing
         # This attribute is only evaluated *after* the link has been taken
-        if after_taken and dict.has_key ('stayonhost'):
+        if after_taken and 'stayonhost' in dict:
             self.set_stay_on_host (self._url.get_host ())
 
         # STAYONDOMAIN processing
         # This attribute is only evaluated *after* the link has been taken
-        if after_taken and dict.has_key ('stayondomain'):
+        if after_taken and 'stayondomain' in dict:
             self.set_stay_on_domain (get_domain_from_host(self._url.get_host()))
 
 
         # STAYBELOW processing
         # This attribute is only evaluated *after* the link has been taken
-        if after_taken and dict.has_key ('staybelow'):
-            if string.lower (dict['staybelow']) == 'staybelow' or dict['staybelow'] == '':
+        if after_taken and 'staybelow' in dict:
+            if dict['staybelow'].lower() == 'staybelow' or dict['staybelow'] == '':
                 the_url = self._url.as_string (with_fragment=0)
                 dict['staybelow'] = the_url
                 #print "Setting STAYBELOW to %s" % the_url
@@ -594,6 +594,7 @@ class Spider:
             f = opener.open(robotpath)
             lines = []
             line = f.readline()
+
             while line:
                 lines.append(line.strip())
                 line = f.readline()
@@ -613,17 +614,17 @@ class Spider:
                         state = 0
                         continue
 
-                    i = line.find('#')
+                    i = line.find(b'#')
                     if i>=0:
                         line = line[:i]
                     line = line.strip()
                     if not line:              # Comment only
                         continue
-                    line = line.split(':', 1)
+                    line = line.split(b':', 1)
                     if len(line) != 2:
                         continue
                     line[0] = line[0].strip().lower()
-                    line[1] = urllib.unquote(line[1].strip())
+                    line[1] = urllib.parse.unquote(line[1].strip())
 
                     if line[0] == "user-agent":
                         if line[1] == '*':    # Everyone
@@ -681,23 +682,23 @@ class Spider:
                         self._exclusion_list.add_entry(entry)
 
     def _create_id_string (self, attributes):
-        values = (type(attributes) == types.DictType and attributes.items()) or attributes.as_dict().items()
+        values = (type(attributes) == dict and list(attributes.items())) or list(attributes.as_dict().items())
         valueslist = []
         for value in values:
             if (value[0][:9] == '_plucker_' or
                 value[0] in LINK_ATTRIBUTES_TO_IGNORE):
                 continue
-            valueslist.append((string.lower(value[0]), value[1],))
+            valueslist.append((value[0].lower(), value[1],))
         valueslist.sort()
         return str(valueslist)
 
     def _needs_processing (self, key, url, attr):
-        if self._collected.has_key (key):
+        if key in self._collected:
             # we need to register the already-collected document with the internal plucker keys that
             # are being held by the link under consideration, so that those keys are resolved
             self._register_document(attr, self._collected[key])
             return 0
-        if self._failed.has_key (url):
+        if url in self._failed:
             return 0
 
 # We'll err on the side of adding the URL to the queue, since we already
@@ -718,7 +719,7 @@ class Spider:
             self._queue.append ((url, attr, key))
             return 1
 
-        if url[:7] == 'http://' and not self._config.get_bool('ignore_robots'):
+        if url[:7] == 'http://':
             self._check_robot(url)
 
         if not force and self._exclusion_list:
@@ -750,9 +751,9 @@ class Spider:
                 if statusfile:
                     line = statusfile.readline()
                     if line:
-                        tokens = string.split(line)
+                        tokens = line.split()
                         if tokens:
-                            estimate = string.atoi(tokens[0])
+                            estimate = int(tokens[0])
 
         # OK, process everything
         self._filenum = 1
@@ -772,7 +773,7 @@ class Spider:
         # See if the attribute dictionary has any keys that need to be bound
         # to this document, for links of various kinds.  If so, call the
         # register_doc method on the doc with the specified index.
-        attribute_dict = (type(attribs) == types.DictType and attribs) or attribs.as_dict()
+        attribute_dict = (type(attribs) == dict and attribs) or attribs.as_dict()
         #sys.stderr.write(str(attribute_dict) + '\n')
         if attribute_dict.get('_plucker_from_image'):
             doc.register_doc(attribute_dict.get('_plucker_id_tag_inlineimage'))
@@ -852,14 +853,14 @@ class Spider:
             key = urltext_key + '\0' + attribute_dict_string
             message(3, "checking " + str(key))
             #sys.stderr.write('key is ' + key + '\n')
-            if self._collected.has_key (key):
+            if key in self._collected:
                 # already collected
                 message("  Already retrieved and parsed.")
                 self._register_document(attributes, self._collected[key])
                 return
 
             # not collected, how about failed?
-            if self._failed.has_key (urltext_key):
+            if urltext_key in self._failed:
                 # already tried, but failed
                 message("  Already tried, but failed.")
                 return
@@ -867,8 +868,8 @@ class Spider:
             # OK, not collected or failed -- so retrieve the contents
             (header, document) = self._retriever (url, alias_list=self._alias_list, \
                                                   post_data=post_data)
-            assert header.has_key ('error code'), "Headers from retriever have no error code"
-            assert header.has_key ('URL'), "Headers from retriever have no URL"
+            assert 'error code' in header, "Headers from retriever have no error code"
+            assert 'URL' in header, "Headers from retriever have no URL"
 
             # Check for successful fetch
             if header['error code'] != 0:
@@ -876,11 +877,11 @@ class Spider:
                 # self._failed[urltext_key] = header
                 self._failed[urltext_key] = None
                 if verbose:
-                    if header.has_key ('error code'):
+                    if 'error code' in header:
                         code = header['error code']
                     else:
                         code = "No error code"
-                    if header.has_key ('error text'):
+                    if 'error text' in header:
                         text = header['error text']
                     else:
                         text = "No error text"
@@ -892,22 +893,12 @@ class Spider:
                     self._collected = {}
                     self._fatal_error = 1
             else:
-                assert header.has_key ('content-type'), \
-                       "Headers from retriever have no content-type (%s)" % repr (header)
+                assert 'Content-Type' in header, \
+                       "Headers from retriever have no Content-Type (%s)" % repr (header)
                 # Fetched OK
                 message("  Retrieved ok.")
                 # "new_url" is the URL the HTTP server sent back to us.
                 new_url = URL (header['URL']).as_string (with_fragment=0)
-                # We compare it with the URL we used to do the HTTP operation.
-                ####################################################################
-                # header['URL'] are file:C:\path\file.ext on python 1.52 and       #
-                # C:\path\file.ext om Python 2.0. Also the case of the Drive       #
-                # letter may change. So a move detected here. This should fix that.#
-                ####################################################################
-                if sys.platform == 'win32' and (string.lower(urltext[0:5]) == 'file:'):
-                    if new_url[0:5] != 'file:':
-                       new_url = 'file:' + new_url
-                       new_url = URL (new_url).as_string (with_fragment=0)
                 # again, we form the mapping key to see if it's already been processed
                 if post_data is not None:
                     new_url_key = new_url + post_data
@@ -927,7 +918,7 @@ class Spider:
                 # this URL...
                 if urltext != new_url:
                     key = new_url_key + '\0' + attribute_dict_string
-                    if self._collected.has_key (key):
+                    if key in self._collected:
                         message("  Already retrieved and parsed.")
                         self._register_document(attributes, self._collected[key])
                         return
@@ -936,7 +927,7 @@ class Spider:
                         return
 
                 # Check for a filter to run document through
-                if header['content-type'][:5] == "text/":
+                if header['Content-Type'][:5] == "text/":
                     filter = self._config.get_string ('filter')
                     if filter is not None:
                         try:
@@ -1048,7 +1039,7 @@ class Spider:
                     for (other_url, other_attributes) in others:
                         message(2, "  Rendering other versions of image %s...\n" % other_url)
                         testkey = other_url + '\0' + self._create_id_string(other_attributes)
-                        if self._collected.has_key(testkey):
+                        if testkey in self._collected:
                             message(3, "    Reusing already-rendered image version %s.\n" % self._collected[testkey].get_url())
                             continue
 
@@ -1094,7 +1085,7 @@ class Spider:
 
 def execute_commands (item_name, config):
     verbosity = config.get_int ('verbosity', 1)
-    for affix  in [''] + map (lambda n: str (n), range (1,10)):
+    for affix  in [''] + [str (n) for n in range (1,10)]:
         command = config.get_string (item_name + affix, "")
         if command:
             message("Executing '%s': %s" % (item_name+affix, command))
@@ -1133,9 +1124,9 @@ def main (config, excl_lists=[]):
     message("Pluckerdir is '%s'..." % pluckerdir)
 
     if verbosity:
-        if os.environ.has_key ('HTTP_PROXY') and not (os.environ.has_key ('HTTP_PROXY_USER') and os.environ.has_key ('HTTP_PROXY_PASS')):
+        if 'HTTP_PROXY' in os.environ and not ('HTTP_PROXY_USER' in os.environ and 'HTTP_PROXY_PASS' in os.environ):
             message("Using proxy '%s'..." % os.environ['HTTP_PROXY'])
-        if os.environ.has_key ('HTTP_PROXY') and (os.environ.has_key ('HTTP_PROXY_USER') and os.environ.has_key ('HTTP_PROXY_PASS')):
+        if 'HTTP_PROXY' in os.environ and ('HTTP_PROXY_USER' in os.environ and 'HTTP_PROXY_PASS' in os.environ):
             message("Using proxy '%s' with authentication for user '%s'..." % (os.environ['HTTP_PROXY'],os.environ['HTTP_PROXY_USER']))
 
     # try to set a socket timeout -- thanks to lemburg for this patch
@@ -1175,14 +1166,14 @@ def main (config, excl_lists=[]):
 
     alias_list = AliasList ()
 
-    if config.get_bool ('zlib_compression', 0):
+    if config.get_bool ('zlib_compression', 1):
         try:
             import zlib
         except ImportError:
             message(0, "Your Python installation does not support ZLib compression.")
             message(0, "We fall back to DOC compression.")
             config.set ('zlib_compression', 'false')
-    if config.get_bool ('zlib_compression', 0):
+    if config.get_bool ('zlib_compression', 1):
         owner_id = config.get_string('owner_id_build')
         if owner_id:
             PyPlucker.PluckerDocs.UseZLibCompression (owner_id)
@@ -1206,7 +1197,7 @@ def main (config, excl_lists=[]):
 
     config_excl_list = config.get_string ('exclusion_lists')
     if config_excl_list is not None:
-        config_excl_list = string.split (config_excl_list, os.pathsep)
+        config_excl_list = config_excl_list.split(os.pathsep)
         for filename in config_excl_list:
             if not os.path.isabs (filename):
                 filename = os.path.join (pluckerdir, filename)
@@ -1305,7 +1296,7 @@ def main (config, excl_lists=[]):
         mapping.print_mapping()
 
     if verbosity > 1:
-        items = Parser.unknown_things.keys ()
+        items = list(Parser.unknown_things.keys ())
         if items:
             message(2, "Unknown items encountered:")
             items.sort ()
@@ -1326,12 +1317,12 @@ def realmain (outputstream, argv=None):
     if not argv:
         argv = sys.argv
 
-    if os.environ.has_key ('PLUCKERHOME'):
+    if 'PLUCKERHOME' in os.environ:
         pluckerhome = os.environ['PLUCKERHOME']
     else:
         pluckerhome = os.path.expanduser ("~/.plucker")
 
-    if os.environ.has_key ('PLUCKERDIR'):
+    if 'PLUCKERDIR' in os.environ:
         pluckerdir = os.environ['PLUCKERDIR']
     else:
         pluckerdir = None
@@ -1559,11 +1550,11 @@ def realmain (outputstream, argv=None):
             # usage ("Only options are allowed as arguments.")
             if len(args) > 1:
                 if args[1][0] == '-':
-                    usage("All options (such as '" + string.join(args[1:]) + "') must be specified before the argument (" + str(args) + ").")
+                    usage("All options (such as '" + "".join(args[1:]) + "') must be specified before the argument (" + str(args) + ").")
                 else:
                     usage("Only one 'root' document should be specified as an argument.")
             root = args[0]
-            if (len(root) > 5) and ((string.lower(root[:5]) == 'http:') or (string.lower(root[:5]) == 'file:')):
+            if (len(root) > 5) and ((root[:5].lower() == 'http:') or (root[:5].lower() == 'file:')):
                 home_url = root
             elif os.path.exists(root):
                 home_url = 'file:'+root
@@ -1600,7 +1591,7 @@ def realmain (outputstream, argv=None):
             elif opt == "--noimages":
                 bpp = 0
             elif opt == "-H" or opt == "--home-url":
-                if home_url and (home_url <> arg):
+                if home_url and (home_url != arg):
                     usage("Two different root URLs specified:  " + home_url + " and " + arg)
                 home_url = arg
             elif opt == "-E" or opt == "--exclusion-list":
@@ -1717,7 +1708,7 @@ def realmain (outputstream, argv=None):
                 no_image_alt = 1
             else:
                 usage ("Error:  Unknown option '%s'" % opt)
-    except getopt.error, text:
+    except getopt.error as text:
         usage (str(text))
 
 
@@ -1820,7 +1811,7 @@ def realmain (outputstream, argv=None):
         config.set ('use_cache', 0)
     if category is not None:
         import string
-        category_count = string.count (category, ";")
+        category_count = category.count(";")
         if category_count < 16:
             config.set ('category', category)
         else:

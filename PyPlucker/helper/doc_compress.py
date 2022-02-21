@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #  -*- mode: python; indent-tabs-mode: nil; -*- coding: latin-1 -*-
 
 #
@@ -41,7 +41,6 @@ DISP_BITS = 11
 def compress(s):
     # optimizations
     # this cut off about 0.1 sec/call
-    _find = string.find
 
     out = []
     space = 0
@@ -82,7 +81,7 @@ def compress(s):
         ns = sstart
         ts = s[i:i+e]
         while (imax - i) >= e and e <= 10:
-            f = _find(s, ts, ns, i)
+            f = s.find(ts, ns, i)
             if f < 0: break
             e = e + 1
             ts = s[i:i+e]
@@ -103,7 +102,7 @@ def compress(s):
             i = i + e
 
         else:
-            c = ord(s[i])
+            c = ord(str(s[i]))
             i = i + 1
             if space:
                 if c >= 0x40 and c <= 0x7f: out.append(c | 0x80)
@@ -127,11 +126,11 @@ def compress(s):
     if space: out.append(32)
     # second phase: look for repetitions of '1 <x>' and combine up to 8 of them.
     # interestingly enough, in regular text this hardly makes a difference.
-    return string.join(map(chr, out),'')
+    return b''.join(list(map(chr, out)))
 
 
 def uncompress(s):
-    s = map(ord, s)
+    s = list(map(ord, s))
     x = 0
     o = []
     try:
@@ -158,6 +157,6 @@ def uncompress(s):
                     o.append(o[len(o)-m])
     except IndexError:
         pass
-    return string.join(map(chr, o), '')
+    return b''.join(list(map(chr, o)))
 
 

@@ -26,7 +26,7 @@ def show_exception(level=1, exn=None):
     """Usage:  show_exception (VERBOSITY_LEVEL (defaults to 1), EXCEPTION (defaults to sys.exc)).
     Prints the indicated exception to UtilFns.ErrorStream if CurrentVerbosityLevel >= VERBOSITY_LEVEL."""
     if not exn:
-        etype, evalue, etb = sys.exc_type, sys.exc_value, sys.exc_traceback
+        etype, evalue, etb = sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]
     else:
         etype, evalue, etb = exn
     if level <= CurrentVerbosityLevel:

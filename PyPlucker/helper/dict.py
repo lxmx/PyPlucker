@@ -11,7 +11,7 @@ import string, types
 
 
 def copy_dict (src, dest):
-    for k in src.keys():
+    for k in list(src.keys()):
         dest[k] = src[k]
 
 
@@ -43,7 +43,7 @@ class DictCompartment:
 
 
     def _prefix_cleaner (self, key):
-        if type (key) != types.StringType:
+        if type (key) != bytes:
             return None
 
         l = len (self._prefix)
@@ -57,29 +57,29 @@ class DictCompartment:
 
 
     def keys(self):
-        return filter (None, map (self._prefix_cleaner, self._dict.keys ()))
+        return [_f for _f in map (self._prefix_cleaner, list(self._dict.keys ())) if _f]
 
 
     def values(self):
-        return map (self.__getitem__, self.keys ())
+        return list(map (self.__getitem__, list(self.keys ())))
 
     def update (self, other_dict):
-        for key in other_dict.keys ():
+        for key in list(other_dict.keys ()):
             self[key] = other_dict[key]
 
     def items(self):
         res = []
-        for k in self.keys ():
+        for k in list(self.keys ()):
             res.append ((k, self[k]))
         return res
 
 
     def __len__(self):
-        return len(self.keys ())
+        return len(list(self.keys ()))
 
 
     def has_key(self, key):
-        return self._dict.has_key (self._prefix_adder (key))
+        return self._prefix_adder (key) in self._dict
 
 
     def __getitem__(self, key):
@@ -88,18 +88,18 @@ class DictCompartment:
 
     def __setitem__(self, key, value):
         if self._read_only:
-            raise RuntimeError, "Trying to set value '%s' in read-only DictCompartment '%s'" % (key, self._prefix)
+            raise RuntimeError("Trying to set value '%s' in read-only DictCompartment '%s'" % (key, self._prefix))
         self._dict[self._prefix_adder (key)] = value
 
 
     def __delitem__(self, key):
         if self._read_only:
-            raise RuntimeError, "Trying to delete value '%s' in read-only DictCompartment '%s'" % (key, self._prefix)
+            raise RuntimeError("Trying to delete value '%s' in read-only DictCompartment '%s'" % (key, self._prefix))
         del self._dict[self._prefix_adder (key)]
 
 
     def clear (self):
-        for k in self.keys ():
+        for k in list(self.keys ()):
             try:
                 del self[k]
             except KeyError:
@@ -109,13 +109,13 @@ class DictCompartment:
 
     def __str__ (self):
         res = []
-        for x in self.keys ():
+        for x in list(self.keys ()):
             res.append ("%s: %s" % (repr (x), self[x]))
         return  "{" + string.join (res, ", ") + "}"
 
     def __repr__ (self):
         res = []
-        for x in self.keys ():
+        for x in list(self.keys ()):
             res.append ("%s: %s" % (repr (x), self[x]))
         return  ("<DictCompartment '%s': " % self._official_prefix) + string.join (res, ", ") + ">"
 
@@ -145,19 +145,19 @@ class CachingDictCompartment (DictCompartment):
 
     def _get_keys (self):
         self._keys = {}
-        for key in filter (None, map (self._prefix_cleaner, self._dict.keys ())):
+        for key in [_f for _f in map (self._prefix_cleaner, list(self._dict.keys ())) if _f]:
             self._keys[key] = None
 
 
     def keys(self):
         if self._keys is None:
             self._get_keys ()
-        return self._keys.keys ()
+        return list(self._keys.keys ())
 
 
     def __setitem__(self, key, value):
         if self._read_only:
-            raise RuntimeError, "Trying to set value '%s' in read-only DictCompartment '%s'" % (key, self._prefix)
+            raise RuntimeError("Trying to set value '%s' in read-only DictCompartment '%s'" % (key, self._prefix))
         if self._keys is None:
             self._get_keys ()
         self._dict[self._prefix_adder (key)] = value
@@ -166,7 +166,7 @@ class CachingDictCompartment (DictCompartment):
 
     def __delitem__(self, key):
         if self._read_only:
-            raise RuntimeError, "Trying to delete value '%s' in read-only DictCompartment '%s'" % (key, self._prefix)
+            raise RuntimeError("Trying to delete value '%s' in read-only DictCompartment '%s'" % (key, self._prefix))
         if self._keys is None:
             self._get_keys ()
         del self._dict[self._prefix_adder (key)]
@@ -174,7 +174,7 @@ class CachingDictCompartment (DictCompartment):
 
 
     def clear (self):
-        for k in self.keys ():
+        for k in list(self.keys ()):
             try:
                 del self[k]
             except KeyError:
@@ -183,7 +183,7 @@ class CachingDictCompartment (DictCompartment):
 
     def __repr__ (self):
         res = []
-        for x in self.keys ():
+        for x in list(self.keys ()):
             res.append ("%s: %s" % (repr (x), self[x]))
         return  ("<CachingDictCompartments '%s': " % self._official_prefix) + string.join (res, ", ") + ">"
 
