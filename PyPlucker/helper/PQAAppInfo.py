@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 import PyPlucker
 from PyPlucker import ImageParser, Retriever
@@ -84,10 +84,10 @@ def get_icon(config, default_icon, req_width, req_height, filename):
                     icon = data
                 else:
                     # Something is wrong with the icon. Give up
-                    print "Something is wrong with %s, using default" % filename
+                    print("Something is wrong with %s, using default" % filename)
                     icon = default_icon
         else:
-            print "File %s not found, using default" % filename
+            print("File %s not found, using default" % filename)
             icon = default_icon
     else:
         icon = default_icon

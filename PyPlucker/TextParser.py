@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #  -*- mode: python; indent-tabs-mode: nil; -*- coding: iso-8859-1 -*-
 
 """
@@ -21,7 +21,7 @@ except ImportError:
     sys.path = [os.path.split (os.path.dirname (file))[0]] + sys.path
     try: import PyPlucker
     except ImportError:
-        print "Cannot find where module PyPlucker is located!"
+        print("Cannot find where module PyPlucker is located!")
         sys.exit (1)
 
     # and forget the temp names...
@@ -36,35 +36,11 @@ class LibraryTooOld(ImportError):
 
 import string
 import re
-try:
-    # if the user has the new xml package installed this might be faster
-    # as that package includes one that uses C code to parse
-    from xml.parsers import sgmllib
-except ImportError:
-    import sgmllib
-    # Fix for the missing comma in raw attributes
-    import re, string
-
-    #
-    #  Originally, plucker overrode this to catch the "@" of
-    #  mailto links.  This bugfix is already in newer pythons.
-    #  If you have a new enough version (the sgmllib distributed
-    #  with Python 2.3.3), then we should use the (newer) python
-    #  version.  This checks whether or not attrfind knows that
-    #  @ can appear in unquoted attribute values. If so, use the
-    #  python version.
-    #
-    temp=sgmllib.attrfind.match('href=mailto:user@host').groups()[2]
-    if temp is None or '@' not in temp:
-        sgmllib.attrfind = re.compile(
-            r'\s*([a-zA-Z_][-:.a-zA-Z_0-9]*)(\s*=\s*'
-            r'(\'[^\']*\'|"[^"]*"|[-a-zA-Z0-9./,:;+*%?!&$\(\)_#=~\'"@]*))?')
-
-
+import sgmllib
 import sys
 import struct
-import urllib
-import htmlentitydefs
+import urllib.request, urllib.parse, urllib.error
+import html.entities
 from PyPlucker import PluckerDocs
 from PyPlucker import Url
 from PyPlucker import DEFAULT_LOCALE_CHARSET_ENCODING
@@ -83,7 +59,6 @@ Max_Paragraph_Size_Anchor_Stretch = 150
 ## The following are used in the parser to clean up things.
 _RE_WHITESPACE = re.compile ("[\n\f \t]+")
 _RE_NONSPACEWHITESPACE = re.compile ("[\n\f\t\t]+")
-_CLEANUP_TRANSTABLE = string.maketrans ("\f", "\n")
 
 ##
 ## There are several colorsets in use on the web.
@@ -303,13 +278,13 @@ def _parse_color (value):
         value = value[1:]
 
     try:
-        val = '%06x' % string.atoi(value, 16)
+        val = '%06x' % int(value, 16)
         return val.upper()
     except ValueError:
         pass
 
     try:
-        val = '%03x' % string.atoi(value, 16)
+        val = '%03x' % int(value, 16)
         val = val.upper()
         val = ((val[0]) * 2) + ((val[1]) * 2) + ((val[2]) * 2)
         return val
@@ -331,7 +306,7 @@ def _list_to_dict (alist):
     for (key,val) in alist:
         # string.lower is done by Python's own parser already
         # but the XML package's version does not.
-        result[string.lower (key)] = cleanup_attribute (val)
+        result[key.lower()] = cleanup_attribute (val)
     return result
 
 
@@ -362,8 +337,8 @@ def cleanup_attribute (text):
             # might as well pass it through.  no worse than a "?"
             content = "&#" + content
     else:
-        if htmlentitydefs.entitydefs.has_key (content):
-            content = htmlentitydefs.entitydefs[content]
+        if content in html.entities.entitydefs:
+            content = html.entities.entitydefs[content]
         else:
             # content = "?"
             # usually unescaped &amp -- AT&T should return AT&T.
@@ -378,20 +353,20 @@ def _clean_newlines (text):
     MacOS uses only \r.  Both version are converted to use only \n.
     XXX We should probably use python's universal newlines now."""
 
-    text = string.replace (text, "\r\n", "\n")
-    text = string.replace (text, "\r", "\n")
+    text = text.replace ("\r\n", "\n")
+    text = text.replace ("\r", "\n")
 
     # DAW David A. Wheeler - HACK to fix incorrectly parsed UTF-8 values,
     # mainly nbsp, left quote, right quote. Needed to parse ESR, etc.
-    text = string.replace (text, "\302\240", "&nbsp;") # Non-breaking space
-    text = string.replace (text, "\342\200\220", "-") # hyphen
-    text = string.replace (text, "\342\200\223", "-") # EN dash
-    text = string.replace (text, "\342\200\224", "-") # EM dash
-    text = string.replace (text, "\342\200\225", "-") # horizontal bar
-    text = string.replace (text, "\342\200\230", "\'") # Open single-quote
-    text = string.replace (text, "\342\200\231", "\'") # Close single-quote
-    text = string.replace (text, "\342\200\234", "\"") # Open double-quote
-    text = string.replace (text, "\342\200\235", "\"") # close double-quote
+    text = text.replace ("\302\240", "&nbsp;") # Non-breaking space
+    text = text.replace ("\342\200\220", "-") # hyphen
+    text = text.replace ("\342\200\223", "-") # EN dash
+    text = text.replace ("\342\200\224", "-") # EM dash
+    text = text.replace ("\342\200\225", "-") # horizontal bar
+    text = text.replace ("\342\200\230", "\'") # Open single-quote
+    text = text.replace ("\342\200\231", "\'") # Close single-quote
+    text = text.replace ("\342\200\234", "\"") # Open double-quote
+    text = text.replace ("\342\200\235", "\"") # close double-quote
 
     return text
 
@@ -520,8 +495,8 @@ class AttributeStack:
 
         Return True if the style was actually changed by this."""
 
-        tag = string.lower (tag)
-        assert self._tags.has_key (tag), "Unknown style code %s" % tag
+        tag = tag.lower()
+        assert tag in self._tags, "Unknown style code %s" % tag
         self._stack.append (tag)
         assert len(self._stack) >= 2
         return self._tags[self._stack[-1]] != self._tags[self._stack[-2]]
@@ -530,8 +505,8 @@ class AttributeStack:
         """Pop a style from the stack and verify that it is 'tag'.  Return
         true if the style now changed (i.e. new top of stack is different from
         the popped item)."""
-        tag = string.lower (tag)
-        assert self._tags.has_key (tag), "Unknown style code %s" % tag
+        tag = tag.lower()
+        assert tag in self._tags, "Unknown style code %s" % tag
         assert len(self._stack) >= 2, "Trying to pop from empty stack"
         res = self._tags[self._stack[-1]] != self._tags[self._stack[-2]]
         top = self._stack[-1]
@@ -561,11 +536,11 @@ class TextDocBuilder:
         self._is_new_line = 1
         self._approximate_size = 0
         self._anchor_dict = None
-        self._max_para_size = ((keyword_args.has_key("max_paragraph_size")
+        self._max_para_size = (("max_paragraph_size" in keyword_args
                                and keyword_args["max_paragraph_size"] > 0
                                and keyword_args["max_paragraph_size"])
                                or Max_Paragraph_Size)
-        self._max_para_size_stretch = ((keyword_args.has_key("max_paragraph_size_anchor_stretch")
+        self._max_para_size_stretch = (("max_paragraph_size_anchor_stretch" in keyword_args
                                        and keyword_args["max_paragraph_size_anchor_stretch"] > 0
                                        and keyword_args["max_paragraph_size_anchor_stretch"])
                                        or Max_Paragraph_Size_Anchor_Stretch)
@@ -613,7 +588,7 @@ class TextDocBuilder:
                 self._doc.set_charset(userspec)
             # OK, so we have no idea.  Use the HTTP default of ISO-8859-1 (4) for
             # http: URLs, and the environment default (if any) for others
-            elif (string.lower(url[:5]) == 'http:' or string.lower(url[:6]) == 'https:'):
+            elif (url[:5].lower() == 'http:' or url[:6].lower() == 'https:'):
                 self._doc.set_charset(4)
             elif locale_default:
                 self._doc.set_charset(locale_default)
@@ -742,7 +717,7 @@ class TextDocBuilder:
 
         # Don't want any white text on PDA's white form since would be invisible,
         # so if white, just darken it a bit to silver.
-        if string.atoi(rgb, 16) == 0xFFFFFF:
+        if int(rgb, 16) == 0xFFFFFF:
             rgb = "C0C0C0"
 
         if self._attributes.push_forecolor (rgb):
@@ -876,7 +851,7 @@ class TextDocBuilder:
 
         # We try to split at a space:
         if " " in rest:
-            f = string.split(rest, None, 1)
+            f = rest.split(None, 1)
             if len (f) > 0:
                 # Shouldn't this always be the case?  Mike reports that it can happen...
                 first = first + f[0]
@@ -898,7 +873,7 @@ class TextDocBuilder:
 
     def add_text (self, text):
         """Add some text, maybe even many lines."""
-        lines = string.split (text, "\n")
+        lines = text.split ("\n")
         for i in range (len (lines)):
             line = lines[i]
             while 1:
@@ -987,9 +962,9 @@ class PlainTextParser:
         text = _clean_newlines (text)
         # This we use to build the document
         self._doc = TextDocBuilder (url, config)
-        if headers.has_key("charset"):
+        if "charset" in headers:
             self._doc.set_charset (headers["charset"])
-        elif attribs.has_key("charset"):
+        elif "charset" in attribs:
             self._doc.set_charset (attribs["charset"])
         self._url = url
         self._text = text
@@ -1060,7 +1035,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         sgmllib.SGMLParser.__init__ (self)
 
         # Convert all <tag/> to <tag /> for XHTML compatability
-        text = string.replace (text, "/>", " />")
+        text = str(text.decode('latin-1')).replace ("/>", " />")
 
         text = _clean_newlines (text)
         # This we use to build the document
@@ -1085,7 +1060,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         # javascript:document.write("<div>") turns it back on, because
         # it only recognizes the div, not the javascript.
         self._visible = 1
-        self._charset = headers.has_key('charset') and charset_name_to_mibenum(headers['charset'])
+        self._charset = 'charset' in headers and charset_name_to_mibenum(headers['charset'])
         if self._charset:
             self._doc.set_charset(headers['charset'])
         # Since some users are really stupid and use HTML wrong, we need a
@@ -1177,7 +1152,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         # we can only check the charset specified in the attribs after parsing
         # the document for <META> tags.  Seems kind of backward, but that's the
         # HTML spec.
-        if not self._charset and self._attribs.has_key('charset'):
+        if not self._charset and 'charset' in self._attribs:
             self._set_charset(self._attribs['charset'])
         self._doc.close ()
 
@@ -1198,18 +1173,18 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
 
     def has_unknown (self):
         """Check if during parsing we found unknown things"""
-        return len (self._unknown.keys ())
+        return len (list(self._unknown.keys ()))
 
     def print_unknown (self, prefix):
         """Print a summary of the unknown things found during parsing"""
-        items = self._unknown.keys ()
+        items = list(self._unknown.keys ())
         items.sort ()
         for item in items:
-            print "%s%s" % (prefix, item)
+            print("%s%s" % (prefix, item))
 
     def get_unknown (self):
         """Get a list unknown things found during parsing."""
-        items = self._unknown.keys ()
+        items = list(self._unknown.keys ())
         items.sort ()
         return items
 
@@ -1456,7 +1431,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
     def do_meta (self, data):
         # if the charset is not already assigned (from the HTTP headers, presumably)
         # and it's available here, then use it
-        if not self._charset and string.lower(data[0][0]) == 'http-equiv' and string.lower(data[0][1]) == 'content-type':
+        if not self._charset and data[0][0].lower() == 'http-equiv' and data[0][1].lower() == 'content-type':
             from PyPlucker.Retriever import parse_http_header_value
             ctype, parameters = parse_http_header_value(data[1][1])
             for parameter in parameters:
@@ -1499,8 +1474,8 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
             # we should retain the whitespace layout.
             # However Plucker cannot handle tabs, form-feeds, so we need to
             # do something useful with that
-            data = string.translate (data, _CLEANUP_TRANSTABLE)
-            data = string.replace (data, "\t", "  ")
+            data = data.translate (data.maketrans("\f", "\n"))
+            data = data.replace ("\t", "  ")
 
 
         #stripped_data = string.strip(data)
@@ -1516,9 +1491,9 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
                 new_forecolor = self._doc.get_forecolor()
                 if new_forecolor != self.last_table_forecolor:
                     rgb = new_forecolor
-                    r = string.atoi (rgb[0:2], 16)
-                    g = string.atoi (rgb[2:4], 16)
-                    b = string.atoi (rgb[4:6], 16)
+                    r = int(rgb[0:2], 16)
+                    g = int(rgb[2:4], 16)
+                    b = int(rgb[4:6], 16)
                     style_str = struct.pack (">BBBBB", 0, 0x53, r, g, b)
                     self.atable.add_cell_text(style_str)
                     self.last_table_forecolor = new_forecolor
@@ -1554,8 +1529,8 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         attributes = _list_to_dict (attributes)
 
         # Place the rgb value of <body>'s 'link' into our global variable for coloring anchors
-        if attributes.has_key ('link'):
-            rgb = string.lower (attributes['link'])
+        if 'link' in attributes:
+            rgb = attributes['link'].lower()
             self._anchor_forecolor = rgb
 
         # Append rgb value of <body>'s 'text' into our regular forecolor stack.
@@ -1564,8 +1539,8 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         # color (which is black). That addresses the case of there being no
         # <body> tag in the document. If <body text=""> does exist, just place
         # it as a second color function after the first.
-        if attributes.has_key ('text'):
-            rgb = string.lower (attributes['text'])
+        if 'text' in attributes:
+            rgb = attributes['text'].lower()
             self._doc.set_forecolor (rgb)
         # This signals that start seeing the page's text from <body> to </body>.
         self._push_visibility (1) # should be 1 anyway, but make sure
@@ -1589,10 +1564,10 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
             rgb = "#000000"
 
             if self._config and self._config.get_bool('no_image_alt', 0):
-                if attributes.has_key ('alt'):
+                if 'alt' in attributes:
                     del attributes['alt']
             else:
-                if attributes.has_key ('alt'):
+                if 'alt' in attributes:
                     # Clean up cruft
                     attributes['alt'] = _RE_NONSPACEWHITESPACE.sub (' ', attributes['alt'], 0)
                     if attributes['alt'].lower() in junk_alt_attributes:
@@ -1600,10 +1575,10 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
                 else:
                     attributes['alt'] = '[img]'
 
-            if attributes.has_key ('src'):
+            if 'src' in attributes:
                 # Set the forecolor, replacing our '#000000' with a color attribute if specified
-                if attributes.has_key ('color'):
-                    rgb = string.lower (attributes['color'])
+                if 'color' in attributes:
+                    rgb = attributes['color'].lower()
                     self._doc.set_forecolor (rgb)
                 else:
                     rgb = None
@@ -1626,14 +1601,14 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
 
                 self._element_beginning = 0
             else:
-                print "<img> without src!  (%s)" % repr (attributes)
+                print("<img> without src!  (%s)" % repr (attributes))
 
 
     def start_a (self, attributes):
         attributes = _list_to_dict (attributes)
-        if attributes.has_key ("href"):
+        if "href" in attributes:
             if self._visible:
-                if attributes.has_key ('href'):
+                if 'href' in attributes:
                     attributes['href'] = Url.CleanURL (attributes['href'], self._base or self._url)
                     attributes['_plucker_id_tag'] = PluckerDocs.obtain_fresh_id()
                     attributes['_plucker_from_url'] = self._url
@@ -1655,7 +1630,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
                     if self.atable is not None and self.in_cell:
                         self.atable.add_link(attr = attributes)
 
-        if attributes.has_key ("name"):
+        if "name" in attributes:
             self._doc.add_name (attributes['name'])
 
 
@@ -1676,7 +1651,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
     def do_base(self, attributes):
         # set self._base even if not in visible section
         attributes = _list_to_dict (attributes)
-        if attributes.has_key ('href'):
+        if 'href' in attributes:
             # clean up cruft
             self._base = Url.CleanURL (attributes['href'], self._url)
 
@@ -1795,8 +1770,8 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
 
     def start_font (self, attributes):
         attributes = _list_to_dict (attributes)
-        if attributes.has_key ('color'):
-            rgb = string.lower (attributes['color'])
+        if 'color' in attributes:
+            rgb = attributes['color'].lower()
             self._doc.set_forecolor (rgb)
         # Following keeps the forecolor stack intact if it is a <font>
         # without a 'color' attribute, such as <font size="+1">
@@ -1890,8 +1865,8 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
     def start_p (self, attributes):
         attribs = _list_to_dict (attributes)
         alignment = self._doc.get_alignment ()
-        if attribs.has_key ('align'):
-            align = string.lower (attribs['align'])
+        if 'align' in attribs:
+            align = attribs['align'].lower()
             if align == 'left':
                 alignment = 0
             elif align == 'center':
@@ -1926,8 +1901,8 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
     def start_div (self, attributes):
         attributes = _list_to_dict (attributes)
         alignment = self._doc.get_alignment ()
-        if attributes.has_key ('align'):
-            align = string.lower (attributes['align'])
+        if 'align' in attributes:
+            align = attributes['align'].lower()
             if align == 'left':
                 alignment = 0
             elif align == 'center':
@@ -1980,17 +1955,17 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         needs_align_clean = 0 # whether need to call an unset_alignment after drawing.
         attributes = _list_to_dict (attributes)
 
-        if attributes.has_key ('size'):
+        if 'size' in attributes:
             # DRS - we convert to float, round up/down as we convert to int
             try:
-                height = int(string.atof (attributes['size']) + 0.5)
+                height = int(attributes['size'].atof() + 0.5)
             except ValueError:
                 pass # use default
-        if attributes.has_key ('color'):
-            rgb = string.lower (attributes['color'])
+        if 'color' in attributes:
+            rgb = attributes['color'].lower()
         else:
             rgb = "#808080" # Default to gray for hr if color not specified
-        if attributes.has_key ('width'):
+        if 'width' in attributes:
              w = attributes['width']
              if w != '100%': # pointless to handle/store 100%s.
                   if w[-1] == '%': # rightmost character is a '%' sign
@@ -1999,8 +1974,8 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
                        width = int (w)
                        if width > 150: # If > 150 pixels, cut to 150 pixels, so all screens work.
                             width = 150
-                  if attributes.has_key ('align'): # hr aligns should override a current div
-                       align = string.lower (attributes['align'])
+                  if 'align' in attributes: # hr aligns should override a current div
+                       align = attributes['align'].lower()
                        if align == 'left':
                             alignment = 0
                        elif align == 'center':
@@ -2117,9 +2092,9 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         if self.atable is not None and self.in_cell:
             new_forecolor = self._doc.get_forecolor()
             rgb = new_forecolor
-            r = string.atoi (rgb[0:2], 16)
-            g = string.atoi (rgb[2:4], 16)
-            b = string.atoi (rgb[4:6], 16)
+            r = int(rgb[0:2], 16)
+            g = int(rgb[2:4], 16)
+            b = int(rgb[4:6], 16)
             style_str = struct.pack (">BBBBB", 0, 0x53, r, g, b)
             self.atable.add_cell_text(style_str)
 
@@ -2169,17 +2144,17 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
     def start_table (self, attributes):
         border = 0
         attr = _list_to_dict (attributes)
-        if attr.has_key ('border') and attr['border']!="0":
+        if 'border' in attr and attr['border']!="0":
             border = 1
         # Robert: Colored nested tables aren't supported, but could be added.
-        if attr.has_key ('bordercolor'):
+        if 'bordercolor' in attr:
             rgb = string.lower (attr['bordercolor'])
             self._tableborder_forecolor = rgb
         else:
             self._tableborder_forecolor = "default"
         self._push_element ("table", border)
         tables = self._config and self._config.get_bool('tables', 0)
-        if self._attribs.has_key('tables') or tables:
+        if 'tables' in self._attribs or tables:
             turl = Url.CleanURL (self._url) + "Table%d" % self.table_count
             attributes = _list_to_dict (attributes)
             attributes['href'] = turl
@@ -2192,15 +2167,15 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
                 self._intables = []
             bpp = self._config.get_int('bpp', 1)
             border_color = 0
-            if attr.has_key ('bordercolor'):
+            if 'bordercolor' in attr:
                 rgb = _parse_color(attr['bordercolor'])
                 if rgb is not None:
-                    border_color = string.atoi(rgb, 16)
+                    border_color = int(rgb, 16)
             link_color = 0
             if self._anchor_forecolor:
                 rgb = _parse_color(self._anchor_forecolor)
                 if rgb is not None:
-                    link_color = string.atoi(rgb, 16)
+                    link_color = int(rgb, 16)
             self.atable = PluckerDocs.PluckerTableDocument(turl, border, attributes, bpp, border_color, link_color)
             if not len(self.table_stack):
                 self._doc.add_table (attributes)
@@ -2290,7 +2265,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
                     self._add_vspace (1)
         attributes = _list_to_dict (attributes)
         alignment = 0
-        if attributes.has_key ('align'):
+        if 'align' in attributes:
             align = string.lower (attributes['align'])
             if align == 'left':
                 alignment = 0
@@ -2378,8 +2353,8 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
     def do_link (self, attr):
         if self._config and self._config.get_bool('bookmarks', 0):
             attrib = _list_to_dict(attr)
-            if attrib.has_key('rel') and attrib['rel'] == 'bookmark':
-                if attrib.has_key('title') and attrib.has_key('href'):
+            if 'rel' in attrib and attrib['rel'] == 'bookmark':
+                if 'title' in attrib and 'href' in attrib:
                     href = Url.CleanURL (attrib['href'], self._base or self._url)
                     self._doc._doc.add_bookmark (attrib['title'], href)
 
@@ -2394,8 +2369,8 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         if tag == "plucker":
 
             attributes = _list_to_dict(attributes)
-            if attributes.has_key("verbosity"):
-                level = string.atoi(attributes["verbosity"])
+            if "verbosity" in attributes:
+                level = int(attributes["verbosity"])
                 if level:
                     self._push_verbosity(level)
                 else:
@@ -2405,13 +2380,13 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
 
         else:
             if self._visible:
-                if not self._unhandled_tags.has_key (tag):
+                if tag not in self._unhandled_tags:
                     self._unknown["<%s>"%tag] = 1
 
     def unknown_endtag (self, tag):
         #print "\tUNKNOWN </%s>" % tag
         if self._visible:
-            if not self._unhandled_tags.has_key (tag):
+            if tag not in self._unhandled_tags:
                 self._unknown["</%s>"%tag] = 1
 
     def unknown_charref (self, ref):
@@ -2442,8 +2417,8 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
 
     def unknown_entityref (self, ref):
         if self._visible:
-            if htmlentitydefs.entitydefs.has_key (ref):
-                s = htmlentitydefs.entitydefs[ref]
+            if ref in html.entities.entitydefs:
+                s = html.entities.entitydefs[ref]
                 if len(s) == 1:
                     val = ord(s)
                     if (val >= 0xa0 and val < 0x100) or (val >= 0x00 and val < 0xFF):
@@ -2471,9 +2446,9 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
 # to need an override.
 #################################################################
     try:
-        import markupbase
-        if '_commentclose' not in vars(markupbase):
-            raise LibraryTooOld('markupbase')
+        import _markupbase
+        if '_commentclose' not in vars(_markupbase):
+            raise LibraryTooOld('_markupbase')
     except ImportError:
         _COMMENTCLOSE = re.compile(r'--\s*>')
         # Actually need two ']' chars, for a marked section, but
@@ -2505,10 +2480,10 @@ if __name__ == "__main__":
     import getopt
     def usage(reason=None):
         if reason is not None:
-            print reason
-        print "Usage: %s  {-c|-p} <filename> [  <filename> ....]" % sys.argv[0]
-        print "     -p  parses the html file(s) and shows the internal representation"
-        print "     -c  checks the html file(s) for unknown/unhandled things"
+            print(reason)
+        print("Usage: %s  {-c|-p} <filename> [  <filename> ....]" % sys.argv[0])
+        print("     -p  parses the html file(s) and shows the internal representation")
+        print("     -c  checks the html file(s) for unknown/unhandled things")
         sys.exit (1)
 
     def id_resolver (any_dict, as_image):
@@ -2528,29 +2503,29 @@ if __name__ == "__main__":
 
     if args:
         for filename in args:
-            print "\nParsing %s..." % filename
+            print("\nParsing %s..." % filename)
             file = open(filename, "r")
             text = string.join (file.readlines (), "")
             file.close()
             converter = StructuredHTMLParser ('file:/'+filename, text)
             if option['p']:
-                print "All parsed.  Contents is:"
+                print("All parsed.  Contents is:")
                 pluckerdoc = converter.get_plucker_doc ()
                 pluckerdoc.resolve_ids (id_resolver)
                 #pluckerdoc.pretty_print () -- has no pretty printing :-(
                 binformat = pluckerdoc.dump_record (1)
                 new_pluckerdoc = PluckerDocs.PluckerTextDocument ('file:/'+filename)
                 new_pluckerdoc.undump_record (binformat, verbose=1)
-            print "Found anchors and images:"
+            print("Found anchors and images:")
             for (url, attr) in converter.get_anchors ():
-                print "  anchor '%s'" % url
+                print("  anchor '%s'" % url)
             for (url, attr) in converter.get_images ():
-                print "  image  '%s'" % url
+                print("  image  '%s'" % url)
             if option['c']:
                 if converter.has_unknown ():
-                    print "\nUnhandled things in the document:"
+                    print("\nUnhandled things in the document:")
                     converter.print_unknown ("  ")
-        print "done"
+        print("done")
     else:
         usage("Please specify some arguments")
 

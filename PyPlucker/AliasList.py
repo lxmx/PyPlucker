@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 """
 AliasList.py   $Id: AliasList.py,v 1.6 2002/05/18 10:28:24 nordstrom Exp $
@@ -40,7 +40,7 @@ class AliasList:
     def get (self, url):
         url = URL (url).as_string (with_fragment=0)
         while 1:
-            if not self._dict.has_key (url):
+            if url not in self._dict:
                 return url
             url = self._dict[url]
 
@@ -48,6 +48,6 @@ class AliasList:
     def __repr__ (self):
         import string
         res = []
-        for i in self._dict.keys ():
+        for i in list(self._dict.keys ()):
             res.append ("'%s' -> '%s'" % (i, self.get (i)))
         return "<AliasList: " + string.join (res, ", ") + ">"

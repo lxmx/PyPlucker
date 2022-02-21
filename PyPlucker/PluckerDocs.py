@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #  -*- mode: python; indent-tabs-mode: nil; -*- coding: iso-8859-1 -*-
 
 """
@@ -56,21 +56,23 @@ if __name__ == '__main__':
 import string
 import struct
 import types
-import urlparse
-import urllib
-import PluckerDocs
+import urllib.parse
+import urllib.request, urllib.parse, urllib.error
+from . import PluckerDocs
+from functools import reduce
 try:
     import zlib
 except ImportError:
     zlib = None
 
-import StringIO
-from rfc822 import Message
+import io
 
-from UtilFns import message, error
+from rfc822py3 import Message
+
+from .UtilFns import message, error
 
 import time
-PILOT_TIME_DELTA = 2082844800L
+PILOT_TIME_DELTA = 2082844800
 
 try:
     from  Pyrite import doc_compress
@@ -167,19 +169,10 @@ def ZLibCompressData (data, username):
     #global count
     if zlib is None:
         raise RuntimeError("No ZLib support in your Python installation!")
-    #sys.stderr.write('len of data for ' + str(count) + ' is ' + str(len(data)) + '\n')
-    #f = open('/tmp/' + str(count) + '.z', 'w'); f.write(data); f.close(); count = count + 1
     retval = zlib.compress (data)
-    #f = open('/tmp/' + str(count) + '.z', 'w'); f.write(retval); f.close(); count = count + 1
     if username:
-        #sys.stderr.write('1:  retval is ' + str(retval[:min(len(retval), 50)]) + '\n')
         l = min(len(username), len(retval))
-        #sys.stderr.write('l is ' + str(l) + '\n')
-        retval = string.join(map(lambda x, y: chr(ord(x) ^ ord(y)), retval[:l], username[:l]), '') + retval[l:]
-        #sys.stderr.write('2:  retval is ' + str(retval[:min(len(retval), 50)]) + '\n')
-        #newval = string.join(map(lambda x, y: chr(ord(x) ^ ord(y)), retval[:l], username[:l]), '') + retval[l:]
-        #sys.stderr.write('2:  newval is ' + str(newval[:min(len(newval), 50)]) + '\n')
-        #f = open('/tmp/' + str(count) + '.z', 'w'); f.write(retval); f.close(); count = count + 1
+        retval = b''.join(list(map(lambda x, y: chr(ord(x) ^ ord(y)), retval[:l], username[:l]))) + retval[l:]
     return retval
 
 def ZLibUncompressData (data):
@@ -257,7 +250,7 @@ def find_registered_document(id):
 def display_registrations():
     global __IDRegistry
     message(0, "Plucker internal key registrations:")
-    for idval, doc in __IDRegistry.items():
+    for idval, doc in list(__IDRegistry.items()):
         message(0, "%4d:  %s" % (idval, doc))
 
 ##########################################################################
@@ -442,9 +435,9 @@ CMD_NAMES = ("TEXT", "IMAGE", "ANCHOR_START", "ANCHOR_END",
 
 # An int to ascii conversion, used by forecolor if unpacking a database
 def itoa (n, base = 2):
-    if type (n) != types.IntType:
+    if type (n) != int:
         raise TypeError('First arg should be an integer')
-    if (type (base) != types.IntType) or not (2<=base<=36):
+    if (type (base) != int) or not (2<=base<=36):
         raise TypeError('Second arg should be an integer between 2 and 36')
     output = []
     pos_n = abs (n)
@@ -458,7 +451,7 @@ def itoa (n, base = 2):
     output.reverse ()
     if n < 0:
         output.insert (0, '-')
-    return string.join (output, '')
+    return b''.join(output)
 
 
 def _cmd_name(index):
@@ -534,7 +527,6 @@ class PluckerTextParagraph:
         message(4, "Adding element %s: %s", _cmd_name(something[0]), something[1])
         self._items.append (something)
 
-
     def add_name (self, name):
         self._names.append (name)
 
@@ -555,7 +547,7 @@ class PluckerTextParagraph:
 
     def add_anchor_start (self, dict_of_items):
         self._add ((CMD_ANCHOR_START, dict_of_items))
-        if dict_of_items.has_key ('href'):
+        if 'href' in dict_of_items:
             self._document_refs.append ((dict_of_items['href'], dict_of_items))
         # the overhead might just be 4, but is generally 6.  Err on the side
         # of lavishness by using 6.
@@ -598,7 +590,7 @@ class PluckerTextParagraph:
 
     def add_image_reference (self, dict_of_items):
         self._add ((CMD_IMAGE, dict_of_items))
-        if dict_of_items.has_key ('src'):
+        if 'src' in dict_of_items:
             self._image_refs.append ((dict_of_items['src'], dict_of_items))
         # either 4 or 6 bytes, depending on whether there's a "big" version
         self._estimated_length = self._estimated_length + 6
@@ -820,7 +812,7 @@ class PluckerTextParagraph:
                 pass
             elif this == CMD_TEXT:
                 if idx == 0:
-                    text = string.lstrip (items[idx][1])
+                    text = items[idx][1].lstrip()
                     items[idx] = (CMD_TEXT, text)
                 text = items[idx][1]
                 if not text:
@@ -845,10 +837,10 @@ class PluckerTextParagraph:
 
             if tag == CMD_ANCHOR_START:
 
-                if value.has_key('_plucker_id_tag'):
+                if '_plucker_id_tag' in value:
                     doc = find_registered_document(value['_plucker_id_tag'])
                     if doc:
-                        oldurl, tag = urllib.splittag(value['href'])
+                        oldurl, tag = urllib.parse.splittag(value['href'])
                         if tag:
                             newurl = doc.get_url() + '#' + tag
                         else:
@@ -865,12 +857,12 @@ class PluckerTextParagraph:
 
             elif tag == CMD_IMAGE:
 
-                if value.has_key('_plucker_id_tag_inlineimage'):
+                if '_plucker_id_tag_inlineimage' in value:
                     doc = find_registered_document(value['_plucker_id_tag_inlineimage'])
                     value['recordnumber'] = doc and resolver.get_or_add(doc)
-                elif value.has_key('src'):
+                elif 'src' in value:
                     value['recordnumber'] = resolver.get_or_add(value['src'])
-                if value.has_key('_plucker_id_tag_outoflineimage'):
+                if '_plucker_id_tag_outoflineimage' in value:
                     doc = find_registered_document(value['_plucker_id_tag_outoflineimage'])
                     if doc:
                         value['big_id'] = resolver.get_or_add(doc)
@@ -878,7 +870,7 @@ class PluckerTextParagraph:
 
             elif tag == CMD_TABLE:
 
-                if value.has_key('_plucker_id_tag'):
+                if '_plucker_id_tag' in value:
                     doc = find_registered_document(value['_plucker_id_tag'])
                 value['recordnumber'] = doc and resolver.get_or_add(value['href'])
 
@@ -908,22 +900,24 @@ class PluckerTextParagraph:
         # the end
         data = []
 
+        # TODO: LOH HERE
+
         for (tag, value) in self._items:
             if tag == CMD_TEXT:
-                data.append (value)
+                data.append (bytes(value, encoding='latin-1'))
             elif tag == CMD_ANCHOR_START:
                 # sys.stderr.write("href=%s, id=%s\n" % (value.get('href'), value.get('recordnumber')))
                 assert self._in_anchor == 0, "Nested anchors"
-                assert value.has_key ('recordnumber'), "Anchor start information lacks document id: " + str(value) + ", self=" + str(self)
+                assert 'recordnumber' in value, "Anchor start information lacks document id: " + str(value) + ", self=" + str(self)
                 id = value['recordnumber']
-                if type (id) == types.TupleType:
+                if type (id) == tuple:
                     assert len (id) == 2, "Recordnumber must be None, record-ID, or (record-ID, paragraph #) tuple, but is %s" % repr (id)
                     if allow_fragments:
                         data.append (struct.pack (">BBHH", 0, 0x0c, id[0], id[1]))
                     else:
                         data.append (struct.pack (">BBH", 0, 0x0a, id[0]))
                     self._in_anchor = 1
-                elif type (id) == types.IntType:
+                elif type (id) == int:
                     data.append (struct.pack (">BBH", 0, 0x0a, id))
                     self._in_anchor = 1
                 elif id is None:
@@ -939,11 +933,11 @@ class PluckerTextParagraph:
             elif tag == CMD_SET_STYLE:
                 data.append (struct.pack (">BBB", 0, 0x11, value))
             elif tag == CMD_IMAGE:
-                assert value.has_key ('recordnumber'), "Image reference information lacks document id"
+                assert 'recordnumber' in value, "Image reference information lacks document id"
                 id = value['recordnumber']
                 if id is None:
-                    if value.has_key ('alt'):
-                        data.append (value['alt'])
+                    if 'alt' in value:
+                        data.append (bytes(value['alt'], encoding='latin-1'))
                     else:
                         message(3, "No recordnumber for image %s", value)
                 else:
@@ -1014,9 +1008,9 @@ class PluckerTextParagraph:
             elif tag == CMD_SET_FORECOLOR:
                 if allow_newstuff:
                     rgb = value
-                    hexr = string.atoi (rgb[0:2], 16) # extract first 2 characters, then convert to hex
-                    hexg = string.atoi (rgb[2:4], 16) # extract middle 2 characters, then convert to hex
-                    hexb = string.atoi (rgb[4:6], 16) # extract last 2 characters,, then convert to hex
+                    hexr = int(rgb[0:2], 16) # extract first 2 characters, then convert to hex
+                    hexg = int(rgb[2:4], 16) # extract middle 2 characters, then convert to hex
+                    hexb = int(rgb[4:6], 16) # extract last 2 characters,, then convert to hex
                     data.append (struct.pack (">BBBBB", 0, 0x53, hexr, hexg, hexb))
                 else:
                     # ignored :-(
@@ -1027,7 +1021,7 @@ class PluckerTextParagraph:
                         data.append(struct.pack (">BBBL", 0, 0x85, len(value[1]), value[0]))
                     else:
                         data.append(struct.pack (">BBBH", 0, 0x83, len(value[1]), value[0]))
-                    data.append(value[1])
+                    data.append(bytes(value[1], encoding='latin-1'))
                 else:
                     pass
             elif tag == CMD_TABLE:
@@ -1037,7 +1031,7 @@ class PluckerTextParagraph:
                 else:
                     pass
 
-        data = string.join (data, "")
+        data = b"".join(data)
 
         padding = 4 - (len (data) % 4)
         if padding == 4:
@@ -1061,7 +1055,7 @@ class PluckerTextParagraph:
         """Dissassemble just one paragraph"""
         self._data = text
         while 1:
-            res = string.split(text, "\0", 1)
+            res = text.split("\0", 1)
             if res[0]:
                 # some text before a function or before the end
                 message("  Text %s" % repr(res[0]))
@@ -1085,13 +1079,13 @@ class PluckerTextParagraph:
                     (id, fragmentid) = struct.unpack(">HH", rest_text[1:5])
                     text = rest_text[5:]
                     if verbose:
-                        print "  Anchor start for document #(%d, %d)" % (id, fragmentid)
+                        print("  Anchor start for document #(%d, %d)" % (id, fragmentid))
                     self.add_anchor_start ({'recordnumber': (id, fragmentid)})
                 elif function_code == "\010":
                     # anchor end
                     text = rest_text[1:]
                     if verbose:
-                        print "  End anchor"
+                        print("  End anchor")
                     self.add_anchor_end ()
                 elif function_code == "\021":
                     # set style
@@ -1105,14 +1099,14 @@ class PluckerTextParagraph:
                             idcode = "bold"
                         else:
                             idcode = "header %d" % id
-                        print "  Style code %d (%s)" % (id, idcode)
+                        print("  Style code %d (%s)" % (id, idcode))
                     self.add_style_change (id)
                 elif function_code == "\032":
                     # image
                     (id,) = struct.unpack(">H", rest_text[1:3])
                     text = rest_text[3:]
                     if verbose:
-                        print "  Reference to image #%d" % id
+                        print("  Reference to image #%d" % id)
                     self.add_image_reference ({'recordnumber': id})
                 elif function_code == "\042":
                     # set margin
@@ -1120,7 +1114,7 @@ class PluckerTextParagraph:
                     text = rest_text[3:]
                     self.add_set_margin (left, right)
                     if verbose:
-                        print "  Set Margins  %d, %d" % (left, right)
+                        print("  Set Margins  %d, %d" % (left, right))
                 elif function_code == "\051":
                     # alignment
                     (code,) = struct.unpack(">B", rest_text[1:2])
@@ -1135,56 +1129,56 @@ class PluckerTextParagraph:
                             al = "center"
                         else:
                             al = "???"
-                        print "  Alignment %s" % al
+                        print("  Alignment %s" % al)
                 elif function_code == "\063":
                     # alignment
                     (height, width, perc_width) = struct.unpack(">BBB", rest_text[1:4])
                     text = rest_text[4:]
                     self.add_hr (height, width, perc_width)
                     if verbose:
-                        print "  Horizontal rule: height: %d, width: %d, %%-width: %d" % (height, width, perc_width)
+                        print("  Horizontal rule: height: %d, width: %d, %%-width: %d" % (height, width, perc_width))
                 elif function_code == "\070":
                     # newline
                     self.add_newline ()
                     text = rest_text[1:]
                     if verbose:
-                        print "  NewLine"
+                        print("  NewLine")
                 elif function_code == "\100":
                     # italics start
                     self.add_italics_start ()
                     text = rest_text[1:]
                     if verbose:
-                        print "  Italics start"
+                        print("  Italics start")
                 elif function_code == "\110":
                     # italics end
                     self.add_italics_end ()
                     text = rest_text[1:]
                     if verbose:
-                        print "  Italics end"
+                        print("  Italics end")
                 elif function_code == "\140":
                     # underline start
                     self.add_underline_start ()
                     text = rest_text[1:]
                     if verbose:
-                        print "  Underline start"
+                        print("  Underline start")
                 elif function_code == "\150":
                     # underline end
                     self.add_underline_end ()
                     text = rest_text[1:]
                     if verbose:
-                        print "  Underline end"
+                        print("  Underline end")
                 elif function_code == "\160":
                     # strikethrough start
                     self.add_strike_start ()
                     text = rest_text[1:]
                     if verbose:
-                        print "  Strikethrough start"
+                        print("  Strikethrough start")
                 elif function_code == "\170":
                     # strikethrough end
                     self.add_strike_end ()
                     text = rest_text[1:]
                     if verbose:
-                        print "  Strikethrough end"
+                        print("  Strikethrough end")
                 elif function_code == "\123":
                     # set forecolor
                     (r, g, b) = struct.unpack(">BBB", rest_text[1:4])
@@ -1194,7 +1188,7 @@ class PluckerTextParagraph:
                     rgb = itoa (r, 16) + itoa (g, 16) + itoa (b, 16)
                     self.add_set_forecolor (rgb)
                     if verbose:
-                        print "  ForeColor start: red: %d, green: %d, blue: %d" % (r, g, b)
+                        print("  ForeColor start: red: %d, green: %d, blue: %d" % (r, g, b))
                 else:
                     raise AssertionError("Unknown function code %s (%d) found" % (repr(function_code), ord(function_code)))
 
@@ -1231,7 +1225,7 @@ class PluckerTextDocument (PluckerDocument):
     ########################
 
     def get_urls (self):
-        return [self.get_url()] + map(lambda x: x.get_url(), self._documents[1:])
+        return [self.get_url()] + [x.get_url() for x in self._documents[1:]]
 
 
     def is_text_document (self):
@@ -1272,7 +1266,7 @@ class PluckerTextDocument (PluckerDocument):
             return self.get_url ()
         else:
             return "plucker:/~parts~/" + \
-                   urllib.quote(self.get_url (), "") + \
+                   urllib.parse.quote(self.get_url (), "") + \
                    ("/%d" % part_no)
 
 
@@ -1280,19 +1274,19 @@ class PluckerTextDocument (PluckerDocument):
         """Resolve references to external documents"""
         # resolve references in paragraphs internally
         #sys.stderr.write("resolving IDs for doc " + str(self) + ", " + self.get_url() + "\n")
-        map (lambda x, r=resolver: r.get_or_add(x), self._documents)
+        list(map (lambda x, r=resolver: r.get_or_add(x), self._documents))
         # First, do other documents chained from this one, if any
-        map (lambda x, r=resolver: x.resolve_ids(r), self._documents[1:])
+        list(map (lambda x, r=resolver: x.resolve_ids(r), self._documents[1:]))
         # now, do paragraphs in self
-        map (lambda p, r=resolver: p.resolve_ids(r), self._paragraphs)
+        list(map (lambda p, r=resolver: p.resolve_ids(r), self._paragraphs))
 
         # now, do the bookmarks
         for (title, url) in self._bookmarks:
-            if not self._bookmark_ids.has_key(title):
+            if title not in self._bookmark_ids:
                 pidval = resolver.get_or_add(url)
-                if type(pidval) == types.TupleType and len(pidval) == 2:
+                if type(pidval) == tuple and len(pidval) == 2:
                     self._bookmark_ids[title] = pidval
-                elif type(pidval) == types.IntType:
+                elif type(pidval) == int:
                     self._bookmark_ids[title] = (pidval, 0)
 
 
@@ -1304,10 +1298,11 @@ class PluckerTextDocument (PluckerDocument):
 
         assert _DOC_HEADER_SIZE==8
 
-        headers = string.join (headers, "")
-        bodies = string.join (bodies, "")
+        headers = b"".join(headers)
+        bodies = b"".join(bodies)
 
         compressed_bodies = CompressFunction (bodies)
+
         if len (compressed_bodies) < len (bodies):
             shipped_bodies = compressed_bodies
             content_type = DOCTYPE_HTML_COMPRESSED
@@ -1315,7 +1310,9 @@ class PluckerTextDocument (PluckerDocument):
             shipped_bodies = bodies
             content_type = DOCTYPE_HTML
 
-        # sys.stderr.write("uid = " + str(id) + ", para_count = " + str(para_count) + ", len(bodies) = " + str(len(bodies)) + ", len(shipped_bodies) = " + str(len(shipped_bodies)) + ", content_type = " + str(content_type) + "\n")
+        # FIXME: Use compression!
+        shipped_bodies = bodies
+        content_type = DOCTYPE_HTML
 
         header = struct.pack (">HHHBB",
                               id,                 # uid
@@ -1330,7 +1327,6 @@ class PluckerTextDocument (PluckerDocument):
     def dump_record (self, id):
         """(Re-)Assemble the binary representation of this text document"""
 
-        # sys.stderr.write("dump record:  %3d %s  %s\n" % (id, self, self.get_url()))
         headers = []
         bodies = []
         size_sum = 0
@@ -1390,11 +1386,11 @@ class PluckerTextDocument (PluckerDocument):
         else:
             typetext = "?? illegal content type for text document"
         if verbose:
-            print "Text Document header:\n" \
+            print("Text Document header:\n" \
                   "\tnumber of paragraphs: %d" \
                   "\tbody size: %d" \
                   "\ttype: %d (%s)" % \
-                  (paragraphs, data_size, content_type, typetext)
+                  (paragraphs, data_size, content_type, typetext))
         ## Do sanity check on header values
         assert content_type==DOCTYPE_HTML or content_type==DOCTYPE_HTML_COMPRESSED, \
                "Content type of text document is %d which is not a legal value" % content_type
@@ -1440,9 +1436,9 @@ class PluckerTextDocument (PluckerDocument):
                 if attr & 4:
                     attr_text = attr_text + ", extra spacing"
             if verbose:
-                print "Paragraph: length %d\n\t   attributes: %d (%s)\n" \
+                print("Paragraph: length %d\n\t   attributes: %d (%s)\n" \
                       "\t   offset: %d (calculated)" % \
-                      (length, attr, attr_text, offset)
+                      (length, attr, attr_text, offset))
 
             paragraph = PluckerTextParagraph (extra_space=((attr&4) == 4))
             paragraph.undump_record (contents, verbose=verbose)
@@ -1596,20 +1592,20 @@ class PluckerImageDocument (PluckerDocument):
                 flags_text = flags_text = "has_color_table"
             flags_text = flags_text + ")"
 
-        print "%sBitmap: %d x %d" % (prefix, width, height)
-        print "%s        flags: %s" % (prefix, flags_text)
-        print "%s        version %d; %d bits per pixel,  %d bytes per row" % \
-              (prefix, version, pixel_size, row_bytes)
-        print "%s        next depth offset: %d" % (prefix, next_depth_offset)
-        print "%s        reserved values: %d, %d" % (prefix, reserved1, reserved2)
+        print("%sBitmap: %d x %d" % (prefix, width, height))
+        print("%s        flags: %s" % (prefix, flags_text))
+        print("%s        version %d; %d bits per pixel,  %d bytes per row" % \
+              (prefix, version, pixel_size, row_bytes))
+        print("%s        next depth offset: %d" % (prefix, next_depth_offset))
+        print("%s        reserved values: %d, %d" % (prefix, reserved1, reserved2))
         if not (flags & 1):
             should_length = height * row_bytes
             is_length = len (bitmap_data)
             if is_length == should_length:
-                print "%s        %d bytes of uncompresses image data" % (prefix, is_length)
+                print("%s        %d bytes of uncompresses image data" % (prefix, is_length))
             else:
-                print "%s        %d bytes of uncompresses image data expected but has %d bytes!!!" % \
-                      (prefix, should_length, is_length)
+                print("%s        %d bytes of uncompresses image data expected but has %d bytes!!!" % \
+                      (prefix, should_length, is_length))
 
 
 
@@ -1618,17 +1614,8 @@ class PluckerImageDocument (PluckerDocument):
         """(Re-)Assemble the binary representation of this image document"""
         assert _DOC_HEADER_SIZE==8
 
-        if len (self._data) > self._config.get_int ('image_compression_limit', 0):
-            compressed_data = CompressFunction (self._data)
-            if len (compressed_data) < len (self._data):
-                data = compressed_data
-                type = DOCTYPE_IMAGE_COMPRESSED
-            else:
-                data = self._data
-                type = DOCTYPE_IMAGE
-        else:
-            data = self._data
-            type = DOCTYPE_IMAGE
+        data = self._data
+        type = DOCTYPE_IMAGE
 
         header = struct.pack (">HHHH",
                               id,                # uid
@@ -1649,12 +1636,12 @@ class PluckerImageDocument (PluckerDocument):
         header_data = data[:_DOC_HEADER_SIZE]
         (uid, paragraphs, data_size, content_type) = struct.unpack (">HHHH", header_data)
         if verbose:
-            print "Documente header:\n" \
+            print("Documente header:\n" \
                   "\tdoc id: %d\n" \
                   "\tnumber of paragraphs: %d\n" \
                   "\tdata size: %d" \
                   "\ttype: %d" % \
-                  (uid, paragraphs, data_size, content_type)
+                  (uid, paragraphs, data_size, content_type))
 
         if content_type == DOCTYPE_IMAGE_COMPRESSED:
             compressed_data = data[_DOC_HEADER_SIZE:]
@@ -1735,12 +1722,12 @@ class PluckerMultiImageDocument (PluckerDocument):
 
         type = DOCTYPE_MULTIIMAGE
 
-        data.append( struct.pack (">HH", self._columns, self._rows))
+        data.append(struct.pack (">HH", self._columns, self._rows))
 
         for piece_id in self._piece_ids:
-            data.append( struct.pack (">H", piece_id))
+            data.append(struct.pack (">H", piece_id))
 
-        data = string.join(data, "")
+        data = b"".join()
 
         header = struct.pack (">HHHH",
                               id,               # uid
@@ -1773,15 +1760,15 @@ class PluckerMailtoDocument (PluckerDocument):
         result = []
 
         data = str (url)
-        data = string.replace (data, "\r", "")
-        data = string.replace (data, "\n", "")
-        data = string.replace (data, "?", "\n")
-        data = string.replace (data, "&amp", "\n")
-        data = string.replace (data, "&", "\n")
-        data = string.replace (data, "=", ":")
+        data = data.replace("\r", "")
+        data = data.replace("\n", "")
+        data = data.replace("?", "\n")
+        data = data.replace("&amp", "\n")
+        data = data.replace("&", "\n")
+        data = data.replace("=", ":")
         data = data + "\n"
 
-        file = StringIO.StringIO (data)
+        file = io.StringIO (data)
 
         m = Message(file)
         to = m.getrawheader("mailto")
@@ -1809,13 +1796,13 @@ class PluckerMailtoDocument (PluckerDocument):
         result.append (struct.pack (">HHHH",
                         to_offset, cc_offset, subject_offset, body_offset))
         if to is not None:
-            result.append (to)
+            result.append (to.encode())
         if cc is not None:
-            result.append (cc)
+            result.append (cc.encode())
         if subject is not None:
-            result.append (subject)
+            result.append (subject.encode())
         if body is not None:
-            result.append (body)
+            result.append (body.encode())
 
         return result, total
 
@@ -1825,8 +1812,8 @@ class PluckerMailtoDocument (PluckerDocument):
         (data, length) = self.parse (self._url)
         type = DOCTYPE_MAILTO
 
-        data = string.join (data, "")
-        data = string.replace(data, "\n", "\000")
+        data = b"".join(data)
+        data = data.replace(b"\n", b"\000")
 
         header = struct.pack (">HHHH",
                               id,               # uid
@@ -1846,12 +1833,12 @@ class PluckerMailtoDocument (PluckerDocument):
         header_data = data[:_DOC_HEADER_SIZE]
         (uid, paragraphs, data_size, content_type) = struct.unpack (">HHHH", header_data)
         if verbose:
-            print "Documente header:\n" \
+            print("Documente header:\n" \
                   "\tdoc id: %d\n" \
                   "\tNumber of paragraphs: %d\n" \
                   "\tdata size: %d" \
                   "\ttype: %d" % \
-                  (uid, paragraphs, data_size, content_type)
+                  (uid, paragraphs, data_size, content_type))
 
         rest_data = data[_DOC_HEADER_SIZE:]
 
@@ -1863,19 +1850,19 @@ class PluckerMailtoDocument (PluckerDocument):
                (data_size, len (rest_data))
         off_data = rest_data[:8]
         (to_offset, cc_offset, subject_offset, body_offset) = struct.unpack (">HHHH", off_data)
-        print "Mailto offsets: \n" \
+        print("Mailto offsets: \n" \
             "\tto      %d\n" \
             "\tcc      %d\n" \
             "\tsubject %d\n" \
             "\tbody    %d" % \
-            (to_offset, cc_offset, subject_offset, body_offset)
-        print "Data: \n" \
+            (to_offset, cc_offset, subject_offset, body_offset))
+        print("Data: \n" \
             "\tto      %s\n" \
             "\tcc      %s\n" \
             "\tsubject %s\n" \
             "\tbody    %s\n" % \
             (rest_data[to_offset:cc_offset], rest_data[cc_offset:subject_offset], \
-             rest_data[subject_offset:body_offset], rest_data[body_offset:])
+             rest_data[subject_offset:body_offset], rest_data[body_offset:]))
 
 
 
@@ -1888,9 +1875,9 @@ class TableCell:
         cols = 1
         rows = 1
         if attr is not None:
-            if attr.has_key('colspan'):
+            if 'colspan' in attr:
                 cols = int(attr['colspan'])
-            if attr.has_key('rowspan'):
+            if 'rowspan' in attr:
                 rows = int(attr['rowspan'])
         self.attr = attr
         self.align = align
@@ -1960,20 +1947,20 @@ class PluckerTableDocument (PluckerDocument):
                 for (cmd, data) in acell.parts:
                     if cmd == CMD_TEXT and not data.isspace():
                         """ In case we were <PRE> """
-                        data = string.split(data, "\n")
-                        data = string.join(data, "\000\070")
-                        parts.append(data)
+                        if type(data) != bytes:
+                            data = data.encode()
+                        parts.append(data.replace(b"\n", b"\000\070"))
                     elif cmd == CMD_ANCHOR_START:
-                        if data.has_key('href'):
+                        if 'href' in data:
                             doc = find_registered_document(data['_plucker_id_tag'])
                             if doc is not None:
                                 link_ref = resolver.get_or_add(doc)
                             else:
                                 link_ref = resolver.get_or_add(data['href'])
-                            if type (link_ref) == types.TupleType:
+                            if type (link_ref) == tuple:
                                 parts.append (struct.pack (">BBHH", 0, 0x0c, link_ref[0], link_ref[1]))
                                 in_anchor = 1
-                            elif type (link_ref) == types.IntType:
+                            elif type (link_ref) == int:
                                 parts.append(struct.pack (">BBH", 0, 0x0A, link_ref))
                                 in_anchor = 1
                     elif cmd == CMD_ANCHOR_END:
@@ -1981,7 +1968,7 @@ class PluckerTableDocument (PluckerDocument):
                             parts.append(struct.pack (">BB", 0, 0x08))
                         in_anchor = 0
                     elif cmd == CMD_TABLE:
-                        if data.has_key('href'):
+                        if 'href' in data:
                             doc = find_registered_document(data['_plucker_id_tag'])
                             if doc is not None:
                                 link_ref = resolver.get_or_add(doc)
@@ -1991,16 +1978,16 @@ class PluckerTableDocument (PluckerDocument):
                                 link_ref = 0
                             parts.append(struct.pack (">BBH", 0, 0x92, link_ref))
                     elif cmd == CMD_IMAGE:
-                        if data.has_key('_plucker_id_tag_inlineimage'):
+                        if '_plucker_id_tag_inlineimage' in data:
                             doc = find_registered_document(data['_plucker_id_tag_inlineimage'])
                             link_ref = doc and resolver.get_or_add(doc)
-                        elif acell.attr.has_key('src'):
+                        elif 'src' in acell.attr:
                             link_ref = resolver.get_or_add(data['src'])
                         if link_ref is None:
-                            if data.has_key ('alt'):
+                            if 'alt' in data:
                                 parts.append (data['alt'])
                         else:
-                            if data.has_key('_plucker_id_tag_outoflineimage'):
+                            if '_plucker_id_tag_outoflineimage' in data:
                                 doc = find_registered_document(data['_plucker_id_tag_outoflineimage'])
                                 big_ref = doc and resolver.get_or_add(doc)
                             if big_ref is not None:
@@ -2009,7 +1996,7 @@ class PluckerTableDocument (PluckerDocument):
                                 parts.append(struct.pack (">BBH", 0, 0x1A, link_ref))
 
                 if len(parts):
-                    acell.text = string.join(parts, "")
+                    acell.text = b"".join(parts)
 
 
     def split_line (self, text, cols):
@@ -2017,34 +2004,34 @@ class PluckerTableDocument (PluckerDocument):
         """Or 20 * cols if the characters are BOLD """
         maxlen = 25
         clines = []
-        ltext = string.split (text, '\000\070')
+        ltext = text.split(b'\000\070')
         while len(ltext):
             while len(ltext[0]):
                 line = ""
                 count = 0
                 offset = 0
                 while offset < len(ltext[0]) and count < (maxlen * cols):
-                    if ord(ltext[0][offset]):
+                    if ord(str(ltext[0][offset])):
                         offset = offset + 1
                         count = count + 1
                     else:
-                        if ord(ltext[0][offset + 1]) == 0x11:
+                        if ord(str(ltext[0][offset + 1])) == 0x11:
                             """ BOLD maxlen is 20 """
-                            if ord(ltext[0][offset + 2]) == 7:
+                            if ord(str(ltext[0][offset + 2])) == 7:
                                 maxlen = 20
                             else:
                                 maxlen = 25
-                        offset = offset + 2 + (ord(ltext[0][offset + 1]) & 7)
-                while offset < len(ltext[0]) and ord(ltext[0][offset]) > 32:
+                        offset = offset + 2 + (ord(str(ltext[0][offset + 1])) & 7)
+                while offset < len(ltext[0]) and ord(str(ltext[0][offset])) > 32:
                     offset = offset + 1
-                if offset < len(ltext[0]) and not ord(ltext[0][offset]):
+                if offset < len(ltext[0]) and not ord(str(ltext[0][offset])):
                     #trailing function
-                    offset = offset + 2 + (ord(ltext[0][offset + 1]) & 7)
+                    offset = offset + 2 + (ord(str(ltext[0][offset + 1])) & 7)
                 line = ltext[0][:offset]
                 ltext[0] = ltext[0][offset:]
                 clines.append(line)
             del ltext[0]
-        clines = string.join(clines, '\000\070')
+        clines = b'\000\070'.join(clines)
         return clines
 
 
@@ -2089,7 +2076,7 @@ class PluckerTableDocument (PluckerDocument):
                     data.append(cell.text)
 
         data.append (struct.pack (">B", 0))
-        data = string.join (data, "")
+        data = b"".join(data)
 
         table_header = struct.pack (">HHHBBLL",
                               len(data),
@@ -2100,7 +2087,7 @@ class PluckerTableDocument (PluckerDocument):
                               self.border_color,
                               self.link_color)
 
-        table_header = string.join (table_header, "")
+        table_header = b"".join(table_headers)
         data = table_header + data
 
         compressed_data = CompressFunction (data)
@@ -2128,15 +2115,15 @@ class PluckerTableDocument (PluckerDocument):
             if rowcols > totcols:
                 totcols = rowcols
             for k in range(0, len(self.rows[j].cols)):
-                print "Cell A = %d I = %d L = %d %s" % (
+                print("Cell A = %d I = %d L = %d %s" % (
                                             self.rows[j].cols[k].align,
                                             self.rows[j].cols[k].image_ref,
                                             len(self.rows[j].cols[k].text),
-                                            self.rows[j].cols[k].text)
+                                            self.rows[j].cols[k].text))
 
-        print "Table border = %d c = %d r = %d" % (self.border,
+        print("Table border = %d c = %d r = %d" % (self.border,
                                                    totcols,
-                                                   len(self.rows))
+                                                   len(self.rows)))
 
 
 class PluckerSpecialDocument (PluckerDocument):
@@ -2194,7 +2181,7 @@ class PluckerIndexDocument (PluckerSpecialDocument):
         index = struct.pack (">HHH",
                               record_id,        # uid
                               type,                # compression type
-                              len(reserved)/4)        # number of reserved records
+                              int(len(reserved)/4))        # number of reserved records
 
         return index + reserved
 
@@ -2210,7 +2197,7 @@ class PluckerCategoryDocument (PluckerSpecialDocument):
 
         category_list = self._config.get_string('category')
 
-        categories = string.replace (category_list, ";", "\0")
+        categories = category_list.replace(";", "\0")
 
         header = struct.pack (">HHHH",
                               record_id,            # uid
@@ -2240,7 +2227,7 @@ class PluckerMetadataDocument (PluckerSpecialDocument):
 
         subrecords = []
         count = 0
-        for key in self._info.keys():
+        for key in list(self._info.keys()):
 
             if key == 'CharSet':
                 subrecords.append(struct.pack(">HHH",
@@ -2252,7 +2239,7 @@ class PluckerMetadataDocument (PluckerSpecialDocument):
             elif key == 'ExceptionalCharSets':
                 subrecords.append(struct.pack('>HH', self.TYPECODE_EXCEPTIONAL_CHARSETS,
                                               2 * len(self._info[key])))
-                subrecords.append(string.join(map(lambda v: struct.pack('>HH', v[0], v[1]), self._info[key]), ''))
+                subrecords.append(b''.join([struct.pack('>HH', v[0], v[1]) for v in self._info[key]]))
                 count = count + 1
 
             elif key == 'OwnerID':
@@ -2283,7 +2270,7 @@ class PluckerMetadataDocument (PluckerSpecialDocument):
                 raise ValueError("Unknown metadata key " + key)
 
         # if we do a metadata record at all, put the publication date/time in
-        val = long(time.time()) + PILOT_TIME_DELTA
+        val = int(time.time()) + PILOT_TIME_DELTA
         subrecords.append(struct.pack('>HHL', self.TYPECODE_PUBLICATION_DATE, 2, val))
         count = count + 1
 
@@ -2294,7 +2281,7 @@ class PluckerMetadataDocument (PluckerSpecialDocument):
                               DOCTYPE_METADATA,     # record type
                               count)                    # number of subrecords
 
-        return string.join([header] + subrecords, '')
+        return b''.join([header] + subrecords)
 
 
 class PluckerLinkIndexDocument (PluckerSpecialDocument):
@@ -2313,11 +2300,11 @@ class PluckerLinkIndexDocument (PluckerSpecialDocument):
                              len(self._docs) * 4,        # size
                              DOCTYPE_LINK_INDEX)]        # content type
 
-        data = data + map(lambda y, r=self._resolver: struct.pack(">HH",
+        data = data + list(map(lambda y, r=self._resolver: struct.pack(">HH",
                                                                   y.get_bounds()[1],
                                                                   r.get_or_add(y)),
-                          self._docs)
-        return string.join(data, '')
+                          self._docs))
+        return b''.join(data)
 
 
 class PluckerLinksDocument (PluckerSpecialDocument):
@@ -2326,7 +2313,8 @@ class PluckerLinksDocument (PluckerSpecialDocument):
         PluckerSpecialDocument.__init__(self, url)
         self._min_id = start
         self._max_id = min(start + 200, len(links_vector))-1
-        self._urls = string.join(links_vector[start:self._max_id+1], '\0') + '\0'
+        links = links_vector[start:self._max_id+1]
+        self._urls = b'\0'.join(bytes(l, encoding='latin-1') for l in links) + b'\0'
 
     def get_bounds(self):
         return (self._min_id, self._max_id)
@@ -2341,6 +2329,8 @@ class PluckerLinksDocument (PluckerSpecialDocument):
         else:
             data = compressed_data
             type = DOCTYPE_LINKS_COMPRESSED
+        data = self._urls
+        type = DOCTYPE_LINKS
         header = struct.pack (">HHHH",
                               id,               # uid
                               0,                # number of paragraphs
@@ -2360,13 +2350,13 @@ class PluckerBookmarkDocument (PluckerSpecialDocument):
         """(Re-)Assemble the binary representation of this document"""
 
         names = []
-        the_keys = self._bookmarks.keys()
+        the_keys = list(self._bookmarks.keys())
         the_keys.sort()
 
         for key in the_keys:
             names.append(key[:20])
 
-        names = string.join(names, '\0') + '\0'
+        names = b'\0'.join(names) + '\0'
         data = struct.pack (">HH", len(self._bookmarks), _DOC_HEADER_SIZE + 4 + len(names))
 
         data = data + names
@@ -2414,7 +2404,7 @@ def Undump_PluckerDocument (url, data, verbose=0):
 
     if not pluckerdoc:
         # nothing worked, i.e. unknown data
-        raise ValueError("Unknown Plucker data »%s«" % repr(data))
+        raise ValueError("Unknown Plucker data \BB%s\AB" % repr(data))
     return pluckerdoc
 
 
@@ -2431,15 +2421,15 @@ if __name__ == '__main__':
 
     def usage(reason=None):
         if reason is not None:
-            print reason
-        print "Usage: %s [-h] [-v] [-s] [-S] [-d] [-z] <filename> ..." % sys.argv[0]
-        print "  Parses the plucker cache file(s) and verifies the contents"
-        print "   -h : display usage information and exit"
-        print "   -v : output version information and exit"
-        print "   -s : show statics of each document"
-        print "   -S : show summary statistics of all documents"
-        print "   -d : show disassembly information of each document"
-        print "   -z : use ZLib to uncompress the documents"
+            print(reason)
+        print("Usage: %s [-h] [-v] [-s] [-S] [-d] [-z] <filename> ..." % sys.argv[0])
+        print("  Parses the plucker cache file(s) and verifies the contents")
+        print("   -h : display usage information and exit")
+        print("   -v : output version information and exit")
+        print("   -s : show statics of each document")
+        print("   -S : show summary statistics of all documents")
+        print("   -d : show disassembly information of each document")
+        print("   -z : use ZLib to uncompress the documents")
 
         if reason is not None:
             sys.exit (1)
@@ -2466,7 +2456,7 @@ if __name__ == '__main__':
         usage ()
 
     if option['v']:
-        print "$Revision: 1.71 $"
+        print("$Revision: 1.71 $")
         sys.exit(0)
 
     if not args:
@@ -2479,13 +2469,13 @@ if __name__ == '__main__':
     num_files = 0
     for filename in args:
         if option['d'] or option['s']:
-            print "\nProcessing %s..." % filename
+            print("\nProcessing %s..." % filename)
         try:
             file = open(filename, "rb")
-            text = string.join (file.readlines (), "")
+            text = b"".join(file.readlines())
             file.close()
-        except IOError, text:
-            print "Error: %s" % text
+        except IOError as text:
+            print("Error: %s" % text)
             text = ""
 
         if text:
@@ -2496,7 +2486,7 @@ if __name__ == '__main__':
                                                   verbose=option['d'])
 
                 if not option['d'] and option['s'] and plucker.is_special_document ():
-                        print "Not a document file"
+                        print("Not a document file")
                 if plucker.is_text_document () or plucker.is_image_document ():
                     stats = plucker.get_stats ()
                     num_files = num_files + 1
@@ -2504,16 +2494,16 @@ if __name__ == '__main__':
                     if option['s']:
                         stats.pretty_print (prefix_string = "")
 
-            except AssertionError, text:
-                print "!!! Parsing %s failed with an assertion error: %s" % (filename, text)
+            except AssertionError as text:
+                print("!!! Parsing %s failed with an assertion error: %s" % (filename, text))
                 # usually text is empty, so we write the traceback
                 import traceback
                 traceback.print_exc ()
-            except ValueError, text:
-                print "!!! Parsing %s failed. %s" % (filename, text)
+            except ValueError as text:
+                print("!!! Parsing %s failed. %s" % (filename, text))
                 import traceback
                 traceback.print_exc ()
 
     if option['S']:
-        print "\n\n%d files processed:" % num_files
+        print("\n\n%d files processed:" % num_files)
         all_stats.pretty_print (prefix_string="")

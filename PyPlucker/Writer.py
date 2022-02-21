@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #  -*- mode: python; indent-tabs-mode: nil; -*-
 
 """
@@ -15,7 +15,7 @@ Distributable under the GNU General Public License Version 2 or newer.
 """
 
 
-import os, struct, string, time, helper.PQAAppInfo, sys, urllib
+import os, struct, string, time, helper.PQAAppInfo, sys, urllib.request, urllib.parse, urllib.error, functools
 import PyPlucker
 from PyPlucker import Url, PluckerDocs
 #from PyPlucker.helper import dict
@@ -43,8 +43,8 @@ class Mapper:
 
         self._url_to_doc_mapping = {}
         temp_list = []
-        for (key, doc) in collection.items():
-            url = string.split(key, '\0')[0]
+        for (key, doc) in list(collection.items()):
+            url = key.split('\0')[0]
             self._url_to_doc_mapping[url] = doc
             # record internal URL name, as well
             if isinstance(doc, PluckerDocs.PluckerDocument):
@@ -58,7 +58,7 @@ class Mapper:
             # check for internal fragment names in the page
             name_mapping = isinstance(doc, PluckerDocs.PluckerTextDocument) and doc.get_name_map()
             if name_mapping:
-                for (name, (internalurl, paragraph_number)) in name_mapping.items():
+                for (name, (internalurl, paragraph_number)) in list(name_mapping.items()):
                     internalurl = alias_list.get(internalurl, internalurl)
                     temp_list.append((key, url, name, internalurl, paragraph_number,))
         for (key, url, name, internalurl, paragraph_number) in temp_list:
@@ -85,7 +85,7 @@ class Mapper:
         # make sure record number 2 goes to the 'home' document (why?)
         url = self._alias_list.get('plucker:/home.html')
         if url:
-            while self._alias_list.has_key(url):
+            while url in self._alias_list:
                 url = self._alias_list.get(url)
             doc = self._url_to_doc_mapping.get(url)
             if doc:
@@ -105,8 +105,8 @@ class Mapper:
                 self._get_id_for_doc(doc)
 
         # finally, make sure each doc has an ID assigned
-        sorted_list=collection.items()
-        sorted_list.sort(lambda x, y: CompareURL(x[0],y[0]))
+        sorted_list=list(collection.items())
+        # TODO: fix sorted_list.sort(key=lambda x, y: CompareURL(x[0],y[0]))
 
         for (url, doc) in sorted_list:
             parts = doc.get_documents()
@@ -181,8 +181,8 @@ class Mapper:
         # If arg is PluckerDocument, returns the id assigned for that document.
         # If arg is integer, treats it as a registered-document id.  Get-only.
         if type(url_or_doc) == type(''):
-            import urllib
-            url, tag = urllib.splittag(url_or_doc)
+            import urllib.request, urllib.parse, urllib.error
+            url, tag = urllib.parse.splittag(url_or_doc)
             finalurl = self._alias_list.get(url, url)
             if tag:
                 id = self._get_id_for_url((finalurl, tag))
@@ -191,11 +191,11 @@ class Mapper:
             return id
         elif isinstance(url_or_doc, PluckerDocs.PluckerDocument):
             url = url_or_doc.get_url()
-            if not self._url_to_doc_mapping.has_key(url):
+            if url not in self._url_to_doc_mapping:
                 self._url_to_doc_mapping[url] = url_or_doc
-            if not self._doc_to_id_mapping.has_key(url_or_doc) and self._url_to_id_mapping.has_key(url):
+            if url_or_doc not in self._doc_to_id_mapping and url in self._url_to_id_mapping:
                 self._doc_to_id_mapping[url_or_doc] = self._url_to_id_mapping[url]
-            if not self._doc_to_id_mapping.has_key(url_or_doc):
+            if url_or_doc not in self._doc_to_id_mapping:
                 message(2, "New document %s added", url_or_doc)
             return self._get_id_for_doc(url_or_doc)
         else:
@@ -207,7 +207,7 @@ class Mapper:
          key_dict = self._url_to_doc_mapping.copy()
          key_dict.update(self._url_to_id_mapping)
          # build a list of all URLs and associated IDs
-         for key in key_dict.keys():
+         for key in list(key_dict.keys()):
              if type(key) == type('') and len(key) > 7 and key[:7] == 'mailto:':
                  del key_dict[key]
                  continue
@@ -226,7 +226,7 @@ class Mapper:
              if isinstance(key_dict[key], PluckerDocs.PluckerDocument):
                  key_dict[key] = self._get_id_for_doc(key_dict[key])
          # invert the dictionary
-         for item in key_dict.items():
+         for item in list(key_dict.items()):
              del key_dict[item[0]]
              key_dict[item[1]] = item[0]
          # build up the list of URLs
@@ -239,14 +239,14 @@ class Mapper:
 
      def get_docs(self):
          # return a list of all the PluckerDocuments known to the mapper
-         return self._doc_to_id_mapping.keys()
+         return list(self._doc_to_id_mapping.keys())
 
 
      def print_mapping(self):
          # print a list of all the URL's and associated IDs
          message(0, '*********\n')
          message(0, 'PluckerDoc record ids:')
-         for (doc, id) in self._doc_to_id_mapping.items():
+         for (doc, id) in list(self._doc_to_id_mapping.items()):
              #sys.stderr.write(str(doc) + '  ' + str(id) + '\n')
              if type(doc) == type(()):
                  url = doc[0].get_url()
@@ -256,7 +256,7 @@ class Mapper:
                  message(0, '%70s => %3d\n' % (url, id))
          if len(self._url_to_id_mapping) > 0:
              message(0, 'Non-included URL record ids:')
-             for (url, id) in self._url_to_id_mapping.items():
+             for (url, id) in list(self._url_to_id_mapping.items()):
                  message(0, '%70s => %3d\n' % (url, id))
          message(0, '*********\n')
 
@@ -345,7 +345,7 @@ class Writer:
                 if verbose > 2:
                     charset_name = charset_mibenum_to_name(doc_mibenum)
                     message(2, pluckerdoc.get_url() + ' has charset ' + str(doc_mibenum) + ((charset_name and " (" + charset_name + ")") or "") + "\n")
-                if charsets.has_key(doc_mibenum):
+                if doc_mibenum in charsets:
                     charsets[doc_mibenum].append(id)
                 else:
                     charsets[doc_mibenum] = [id]
@@ -354,35 +354,36 @@ class Writer:
                 if self._config and self._config.get_bool('bookmark_pages', 0):
                     key = pluckerdoc.get_url()
                     pid = self._mapper.get_or_add(key)
-                    key = string.split(key, ":")
+                    key = key.split(":")
                     key = key[-1]
-                    key = string.split(key, "/")
+                    key = key.split("/")
                     key = key[-1]
-                    key = string.split(key, "?")
+                    key = key.split("?")
                     key = key[0]
                     if not len(key):
                         key = 'Home Page'
-                    if not bookmarks.has_key(key):
+                    if key not in bookmarks:
                         bookmarks[key] = (pid, 0)
 
                 if self._config and self._config.get_bool('bookmarks', 0):
                     tmp_book = pluckerdoc.get_bookmark_ids()
-                    for key in tmp_book.keys():
-                        if not bookmarks.has_key(key):
+                    for key in list(tmp_book.keys()):
+                        if key not in bookmarks:
                             bookmarks[key] = tmp_book[key]
 
             self._write_doc (out_dict, pluckerdoc, pluckerdoc.get_url(), id, verbose)
 
         ## Do some error checking
-        if not out_dict.has_key (2):
+        if 2 not in out_dict:
             raise RuntimeError("The collection process failed to generate a 'home' document")
 
         ## set up the metadata mapping, if any
         metadata = {}
         # set the default to the charset which has the 'most' pages
-        items = charsets.items()
+        items = list(charsets.items())
         if len(items) > 0:        # have to allow for image-only document
-            items.sort(lambda x, y: ((len(x[1]) < len(y[1]) and 1) or ((len(x[1]) > len(y[1])) and -1) or 0))
+            compare = lambda x, y: ((len(x[1]) < len(y[1]) and 1) or ((len(x[1]) > len(y[1])) and -1) or 0)
+            items.sort(key=functools.cmp_to_key(compare))
             mibenum = items[0][0]
             odd_charsets = []
             if len(items) > 1:
@@ -460,7 +461,7 @@ class Writer:
             self._write_doc (out_dict, type, tmp_url, 5, verbose)
 
         ## now write everything else
-        the_ids = out_dict.keys ()
+        the_ids = list(out_dict.keys ())
         the_ids.sort ()  # they are numeric, so sort does the right thing
         for id in the_ids:
             dump, the_url, the_id, verbose = out_dict[id]
@@ -550,7 +551,7 @@ class PDBWriter (Writer):
         info['type'] = 'Data'
         info['createDate'] = int (time.time())
         info['modifyDate'] = info['createDate']
-        info['backupDate'] = -2082844800L
+        info['backupDate'] = -2082844800
         info['flagCopyPrevention'] = self._flag_copy_prevention
         info['flagLaunchableData'] = self._flag_launchableData
         info['flagBackup'] = self._flag_backup
