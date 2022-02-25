@@ -15,7 +15,7 @@ Assuming Ubuntu 21.10 or similar. Otherwise you may want to edit the `Makefile`.
 Clone the repository and:
 
 ```
-sudo apt install python2.7 netbpm
+sudo apt install python2.7 netpbm libjpeg-progs
 sudo make install
 ```
 

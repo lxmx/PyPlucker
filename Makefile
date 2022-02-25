@@ -13,5 +13,5 @@ clean:
 
 uninstall:
 	rm -rf $(MODULE_DIR)
-	rm $(BINDIR)/plucker-build
+	rm -f $(BINDIR)/plucker-build
 
