@@ -132,7 +132,10 @@
 ;;image_parser =
 
 ;; Override the default user agent (some websites are blocking Python-urllib/2.7)
-;;user_agent = Mozilla/5.0 (Windows; U; MSIE 9.0; WIndows NT 9.0; en-US))
+user_agent = Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US)
+
+;; Don't respect robots.txt
+ignore_robots = true
 
 ;;
 ;; A string specifying a command to be executed before spidering.
