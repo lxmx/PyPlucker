@@ -210,14 +210,11 @@ class SimpleRetriever:
             try:
                 real_url = str (url)
                 webdoc = self._urlopener.open (real_url, post_data)
-                if hasattr (webdoc, 'retcode'):
+                if 400 <= webdoc.status < 600:
                     headers_dict = {'URL': real_url,
-                                    'error code': webdoc.retcode,
-                                    'error text': webdoc.retmessage}
-                    doc_info = webdoc.info ()
-                    if doc_info is not None:
-                        # This should always be a dict, but some people found None... :-(
-                        headers_dict.update (dict(doc_info))
+                                    'error code': webdoc.status,
+                                    'error text': 'HTTP error ' + str(webdoc.status)}
+                    headers_dict.update (dict(webdoc.info()))
                     return (headers_dict, None)
                 if hasattr (webdoc, 'url'):
                     (webdoc_protocol, webdoc_rest_of_url) = urllib.parse.splittype(webdoc.url)
