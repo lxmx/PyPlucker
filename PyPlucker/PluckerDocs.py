@@ -67,7 +67,7 @@ except ImportError:
 
 import io
 
-from rfc822py3 import Message
+from .rfc822py3 import Message
 
 from .UtilFns import message, error
 
@@ -1727,7 +1727,7 @@ class PluckerMultiImageDocument (PluckerDocument):
         for piece_id in self._piece_ids:
             data.append(struct.pack (">H", piece_id))
 
-        data = b"".join()
+        data = b"".join(data)
 
         header = struct.pack (">HHHH",
                               id,               # uid

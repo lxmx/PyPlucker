@@ -299,11 +299,11 @@ class ImageParser:
             wide = 300
             high = 100
 
-        cols = width / wide
+        cols = int(width / wide)
         if width % wide:
             cols = cols + 1
 
-        rows = height / high
+        rows = int(height / high)
         if height % high:
             rows = rows + 1
 
