@@ -142,7 +142,7 @@ class Configuration:
                 return None
             else:
                 res = default
-        if type (res) == bytes:
+        if type (res) == str:
             res = string.lower (res)
         if res == 1 or res == "1" or res == "y" or res == "yes" or res == "true" or res == "on":
             return 1
