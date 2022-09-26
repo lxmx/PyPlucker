@@ -126,8 +126,8 @@
 ;; Specify which parser to use to convert images. Defaults to
 ;; whatever the system determines to be the default parser.
 ;;
-;;   netpbm2     - NetPbm image parser
-;;   windows     - Windows image parser
+;;   netpbm2 - NetPbm image parser
+;;   pillow  - Pillow image parser
 ;;
 ;;image_parser =
 

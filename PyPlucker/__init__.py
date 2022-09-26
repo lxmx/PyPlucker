@@ -3,11 +3,11 @@
 # $Id: __init__.py.in,v 1.9 2005/01/18 04:15:48 jimj Exp $
 #
 
-__version__ = "2005-02-07-cvs"
+__version__ = "2022-09-27-git"
 
 lib_dir = "/usr/local/etc"
 
-DEFAULT_IMAGE_PARSER_SETTING = "netpbm2"
+DEFAULT_IMAGE_PARSER_SETTING = "pillow"
 
 import sys
 if sys.platform == 'win32':

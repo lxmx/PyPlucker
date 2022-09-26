@@ -16,11 +16,7 @@ others Copyright 1999 by Holger Duerer <holly@starship.python.net>
 Distributable under the GNU General Public License Version 2 or newer.
 """
 
-import os, sys, string, tempfile, re, operator, subprocess
-try:
-    from io import StringIO
-except ImportError:
-    from io import StringIO
+import os, sys, string, tempfile, re, io, operator, subprocess
 from PyPlucker import PluckerDocs, DEFAULT_IMAGE_PARSER_SETTING
 from PyPlucker.UtilFns import message, error
 
@@ -61,10 +57,6 @@ def is_int (s):
 class UnimplementedMethod(AttributeError):
     def __init__(self, value):
         AttributeError.__init__(self, value)
-
-class ImageSize(ValueError):
-    def __init__(self, value):
-        ValueError.__init__(self, value)
 
 #####################################################################
 ##
@@ -257,7 +249,7 @@ class ImageParser:
 
         if len(newbits) == 0:
             # Oops, nothing fetched?!?
-            raise ImageSize("Converted image size for %s is zero bytes. Nothing fetched?" % self._url)
+            raise RuntimeError("Converted image size for %s is zero bytes. Nothing fetched?" % self._url)
 
         elif len(newbits) > SimpleImageMaxSize:
             # image bits too large for a _SINGLE_ Plucker image record
@@ -338,13 +330,71 @@ class ImageParser:
         list(map(lambda x, doc=doc: doc.add_related_image(x[0], x[1]), versions))
         return doc
 
+class PillowImageParser(ImageParser):
 
+    "Convert an image to the PalmBitmap. Uses Python Imaging Library."
 
-#####################################################################
-##
-## This is an updated version of the standard parser from Ondrej.  It depends on os.popen
-## and the availability of the pbmtools plus the updated Tbmp-tools that can handle color.
-##
+    def __init__(self, url, type, data, config, attribs, compress=1):
+        from PIL import Image
+        import PalmImagePlugin
+
+        ImageParser.__init__(self, url, type, data, config, attribs)
+        try:
+            self._image = Image.open (io.BytesIO(data))
+        except:
+            if self._verbose > 1:
+                import traceback
+                traceback.print_exc()
+            raise RuntimeError("Error while opening image " + self._url + " with PIL")
+
+    def _convert_to_Tbmp(self, im, pil_mode, bpp):
+        from PalmImagePlugin import Palm8BitColormapImage
+
+        palmdata = io.BytesIO()
+        if pil_mode == "1" or bpp == 1:
+            im.convert("L").convert("1").save(palmdata, "Palm", bpp=bpp)
+        elif pil_mode == "L":
+            im.convert(pil_mode).save(palmdata, "Palm", bpp=bpp)
+        elif pil_mode == "P" and bpp == 8:
+            im.convert("RGB").quantize(palette=Palm8BitColormapImage).save(palmdata, "Palm", bpp=8)
+        elif pil_mode == "RGB" and bpp == 16:
+            im.convert("RGB").save(palmdata, "Palm", bpp=bpp)
+        else:
+            raise KeyError("Unsupported PIL mode " + pil_mode + " passed to convert.Tbmp")
+        data = palmdata.getvalue()
+        palmdata.close()
+        return data
+
+    def size(self):
+        return self._image.size
+
+    def convert(self, width, height, bpp, section, prescale=None):
+        try:
+            im = self._image
+            if prescale:
+                im = im.resize(prescale)
+            if section:
+                im = im.crop((section[0], section[1],
+                                       section[0] + section[2], section[1] + section[3]))
+            if width != im.size[0] or height != im.size[1]:
+                message(2, "Scaling original %dx%d image by %f to %dx%dx%d" % (im.size[0], im.size[1], float(width)/float(im.size[0]), width, height, bpp))
+                im = im.resize((width, height))
+            if bpp == 1:
+                return self._convert_to_Tbmp (im, "1", 1)
+            elif bpp in (2, 4):
+                return self._convert_to_Tbmp (im, "L", bpp)
+            elif bpp == 8:
+                return self._convert_to_Tbmp (im, "P", bpp)
+            elif bpp == 16:
+                return self._convert_to_Tbmp (im, "RGB", bpp)
+            else:
+                message(0, "%d bpp images not supported with PIL imaging yet.  Using 4 bpp grayscale.\n" % (bpp,))
+                return self._convert_to_Tbmp (im, "L", 4)
+        except:
+            if self._verbose > 1:
+                import traceback
+                traceback.print_exc()
+            raise RuntimeError("Error while converting image " + self._url + " with PIL")
 
 class NewNetPBMImageParser(ImageParser):
     "Convert an image to the PalmBitmap. Uses netpbm."
@@ -505,7 +555,7 @@ class NewNetPBMImageParser(ImageParser):
             f.close()
 
             if p.returncode != 0:
-                raise RuntimeError("call to '" + command + "' returned status " + str(status))
+                raise RuntimeError("call to '" + command + "' returned status " + str(p.returncode))
             f = open(self._tmpfile, 'rb')
             newbits = f.read()
             f.close()
@@ -518,6 +568,8 @@ def map_parser_name(name):
     parser = name.lower()
     if parser == "netpbm2":
         return NewNetPBMImageParser
+    elif parser == "pillow":
+        return PillowImageParser
     else:
         return None
 

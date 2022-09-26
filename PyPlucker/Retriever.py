@@ -57,6 +57,8 @@ def GuessType (name):
                   '.jpg': 'image/jpeg',
                   '.jpe': 'image/jpeg',
                   '.jpeg': 'image/jpeg',
+                  # FIXME: Bugs with webp when using bpp=16
+                  '.webp': 'image/webp',
                   '.html': 'text/html',
                   '.htm': 'text/html',
                   '.txt': 'text/plain',
