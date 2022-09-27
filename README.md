@@ -2,21 +2,20 @@
 
 It's 2022 and you need a Palm!
 
-This is an import of the Python based Plucker parser from the [original repository](https://github.com/arpruss/plucker). It's meant to work on a recent GNU/Linux distro. The parser downloads your favorite web pages or converts local files for the [Plucker app](https://palmdb.net/app/plucker).
+This is an updated version of the Python based Plucker parser from the [original repository](https://github.com/arpruss/plucker). The parser downloads your favorite web pages or converts local files for the [Plucker app](https://palmdb.net/app/plucker).
 
 <img src="https://user-images.githubusercontent.com/58649917/153739856-226c672f-bfb9-4436-ac2d-de79e63a4e3c.png" width=320/>
 
-I have also stripped some legacy bits like OS/2 support and broken image converter alternatives.
+Updates from the original parser:
+
+* Has been ported to Python 3
+* Some legacy bits have been removed: OS/2 support, non-working image parser versions
+* The default image parser is now based on [Pillow](https://python-pillow.org/) which doesn't require any third-party dependencies and adds WebP support as a bonus.
 
 ## Installation
 
-Assuming Ubuntu 21.10 or similar. Otherwise you may want to edit the `Makefile`.
-
-Clone the repository and:
-
 ```
-sudo apt install python2.7 netpbm libjpeg-progs
-sudo make install
+pip install PyPlucker
 ```
 
 Optionally, populate the example config file and `home.html`:
@@ -34,12 +33,13 @@ plucker-build --bpp=4 --maxdepth=1 --doc-file=PythonCompileAllDoc -H https://doc
 
 ```
 
-See `~/.pluckerrc` for the options and parameters. Also see the excellent official documentation as supplied in the [Palm bundle](https://palmdb.net/app/plucker).
+See `~/.pluckerrc` for the options and parameters.
 
 ### In Practice
 
-Since it's been a while since Plucker's HTML parser was last updated, it's a good idea to run more complex pages through a modern Readability filter like [percollate](https://github.com/danburzo/percollate) first. See `examples/pluck.sh` for a working script.
+Since it's been a while since Plucker's HTML processing and cleanup code was last updated, it's a good idea to run more complex pages through a modern Readability filter like [percollate](https://github.com/danburzo/percollate) first. See `examples/pluck.sh` for a working script.
 
-## TODO
+### References
 
-- Port to Python3
+* Original [Python 2 version](https://github.com/lxmx/PyPlucker/tree/python3)
+
