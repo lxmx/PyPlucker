@@ -33,8 +33,6 @@ __version__ = '$Id: doc_compress.py,v 1.9 2007/08/28 13:59:14 desrod Exp $'
 __copyright__ = 'Copyright 1999 Rob Tillotson <robt@debian.org>'
 
 
-import string
-
 COUNT_BITS = 3
 DISP_BITS = 11
 
@@ -102,7 +100,7 @@ def compress(s):
             i = i + e
 
         else:
-            c = ord(str(s[i]))
+            c = s[i]
             i = i + 1
             if space:
                 if c >= 0x40 and c <= 0x7f: out.append(c | 0x80)
@@ -126,9 +124,17 @@ def compress(s):
     if space: out.append(32)
     # second phase: look for repetitions of '1 <x>' and combine up to 8 of them.
     # interestingly enough, in regular text this hardly makes a difference.
-    return b''.join(list(map(chr, out)))
+    strings = list(map(chr, out))
 
+    def to_bytes(val):
+        return bytes(val, encoding='latin-1')
 
+    retval = map(to_bytes, strings)
+
+    return b''.join(retval)
+
+# FIXME: Most likely broken since Python3 conversion
+# ord / chr calls not needed?
 def uncompress(s):
     s = list(map(ord, s))
     x = 0

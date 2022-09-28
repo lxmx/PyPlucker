@@ -10,7 +10,7 @@ Copyright 2000 by Holger Duerer <holly@starship.python.net>
 Distributable under the GNU General Public License Version 2 or newer.
 """
 
-import os, sys, types, string, configparser
+import os, sys, types, configparser
 import PyPlucker
 from functools import reduce
 
@@ -143,7 +143,7 @@ class Configuration:
             else:
                 res = default
         if type (res) == str:
-            res = string.lower (res)
+            res = res.lower()
         if res == 1 or res == "1" or res == "y" or res == "yes" or res == "true" or res == "on":
             return 1
         if res == 0 or res == "0" or res == "n" or res == "no" or res == "false" or res == "off":

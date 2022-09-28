@@ -149,7 +149,7 @@ def DocCompressData (data):
     if not doc_compress_function:
         raise RuntimeError("No doc compression function available!")
 
-    res = ""
+    res = b""
     while data:
         block = data[:4096]
         data = data[4096:]
@@ -1310,10 +1310,6 @@ class PluckerTextDocument (PluckerDocument):
             shipped_bodies = bodies
             content_type = DOCTYPE_HTML
 
-        # FIXME: Use compression!
-        shipped_bodies = bodies
-        content_type = DOCTYPE_HTML
-
         header = struct.pack (">HHHBB",
                               id,                 # uid
                               para_count,         # number of paragraphs
@@ -1614,8 +1610,17 @@ class PluckerImageDocument (PluckerDocument):
         """(Re-)Assemble the binary representation of this image document"""
         assert _DOC_HEADER_SIZE==8
 
-        data = self._data
-        type = DOCTYPE_IMAGE
+        if len (self._data) > self._config.get_int ('image_compression_limit', 0):
+            compressed_data = CompressFunction (self._data)
+            if len (compressed_data) < len (self._data):
+                data = compressed_data
+                type = DOCTYPE_IMAGE_COMPRESSED
+            else:
+                data = self._data
+                type = DOCTYPE_IMAGE
+        else:
+            data = self._data
+            type = DOCTYPE_IMAGE
 
         header = struct.pack (">HHHH",
                               id,                # uid
