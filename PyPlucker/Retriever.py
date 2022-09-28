@@ -83,7 +83,7 @@ class PluckerFancyOpener (urllib.request.FancyURLopener):
         referrer = config and config.get_string('referrer', None)
         if referrer:
             self.addheader('Referer', referrer)
-        self.addheader ('Accept', 'image/jpeg, image/gif, image/png, text/html, text/plain, text/xhtml;q=0.8, text/xml;q=0.6, text/*;q=0.4')
+        self.addheader ('Accept', 'image/jpeg, image/gif, image/png, image/webp, text/html, text/plain, text/xhtml;q=0.8, text/xml;q=0.6, text/*;q=0.4')
 
         if 'HTTP_PROXY' in os.environ and ('HTTP_PROXY_USER' in os.environ and 'HTTP_PROXY_PASS' in os.environ):
             import base64

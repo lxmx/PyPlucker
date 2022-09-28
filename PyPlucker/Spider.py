@@ -42,6 +42,9 @@ from PyPlucker.AliasList import AliasList
 from PyPlucker.UtilFns import message, error, show_exception
 import os, string, sys, types, re
 
+import urllib.error
+from urllib.request import urlopen
+
 
 VALID_LINK_ATTRIBUTES = (
 
@@ -199,19 +202,6 @@ def get_domain_from_host(url_addy):
         return(domain)
     else:
         return(url_addy)
-
-
-import urllib.request, urllib.parse, urllib.error
-
-class URLopener(urllib.request.FancyURLopener):
-    def __init__(self, *args):
-        urllib.request.FancyURLopener.__init__(self, *args)
-        self.errcode = 200
-
-    def http_error_default(self, url, fp, errcode, errmsg, headers):
-        self.errcode = errcode
-        return urllib.request.FancyURLopener.http_error_default(self, url, fp, errcode,
-                                                        errmsg, headers)
 
 
 class SpiderLink:
@@ -590,37 +580,37 @@ class Spider:
             basepath = 'http://' + this_url.get_host()
             homepath = 'http://' + self._home_url.get_host()
             robotpath = basepath + '/robots.txt'
-            opener = URLopener()
-            f = opener.open(robotpath)
-            lines = []
-            line = f.readline()
+            try:
+                response = urlopen(robotpath)
+            except urllib.error.HTTPError:
+                return
 
-            while line:
-                lines.append(line.strip())
-                line = f.readline()
+            errcode = response.getcode()
+
             state = 0
-            if opener.errcode == 401 or opener.errcode == 403:   # No access
+            if errcode == 401 or errcode == 403:   # No access
                 if basepath == homepath:                         # home_url
                     error("\'%s\' will not allow \'%s\' access.\n" \
                               % (robotpath, user_agent))
                     sys.exit(2)
                 else:
                     default.append('1000000:-:%s/.*' % basepath)
-            elif opener.errcode >= 400:                          # All access
+            elif errcode >= 400:                          # All access
                 mine_all = 1
-            elif opener.errcode == 200 and lines:                # Got it
+            elif errcode == 200:                # Got it
+                lines = response.read().decode().split("\n")
                 for line in lines:
                     if not line:              # Record delimiter
                         state = 0
                         continue
 
-                    i = line.find(b'#')
+                    i = line.find('#')
                     if i>=0:
                         line = line[:i]
                     line = line.strip()
                     if not line:              # Comment only
                         continue
-                    line = line.split(b':', 1)
+                    line = line.split(':', 1)
                     if len(line) != 2:
                         continue
                     line[0] = line[0].strip().lower()
