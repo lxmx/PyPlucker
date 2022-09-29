@@ -203,7 +203,7 @@ class SimpleRetriever:
             return ({'URL': url,
                      'error code': 0,
                      'error text': "OK",
-                     'content-type': "mailto/text",
+                     'Content-Type': "mailto/text",
                      'content-length': 0},
                      "")
 
