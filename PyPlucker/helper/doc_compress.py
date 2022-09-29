@@ -133,10 +133,7 @@ def compress(s):
 
     return b''.join(retval)
 
-# FIXME: Most likely broken since Python3 conversion
-# ord / chr calls not needed?
 def uncompress(s):
-    s = list(map(ord, s))
     x = 0
     o = []
     try:
@@ -163,6 +160,6 @@ def uncompress(s):
                     o.append(o[len(o)-m])
     except IndexError:
         pass
-    return b''.join(list(map(chr, o)))
+    return ''.join(list(map(chr, o)))
 
 
