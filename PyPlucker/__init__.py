@@ -1,9 +1,4 @@
-# parser/python/PyPlucker/__init__.py.  Generated from __init__.py.in by configure.
-#
-# $Id: __init__.py.in,v 1.9 2005/01/18 04:15:48 jimj Exp $
-#
-
-__version__ = "2022-09-27-git"
+__version__ = "3.0"
 
 lib_dir = "/usr/local/etc"
 
