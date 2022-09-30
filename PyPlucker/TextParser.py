@@ -370,7 +370,40 @@ def _clean_newlines (text):
 
     return text
 
+UNICODE_REPLACEMENTS = {
+        8211: "-",
+        8212: "--",
+        8216: "`",
+        8217: "´",
+        8220: "\"",
+        8230: "...",
+        8221: "\"",
+        8226: " ",
+        8482: "(tm)",
+        8594: "->",
+        8592: "<-",
+        8658: "=>",
+        8249: "<",
+        8250: ">"
+}
 
+def _sub_unicode_symbols(line):
+    try:
+        decoded = line.decode('utf-8')
+    except UnicodeDecodeError:
+        return line
+
+    retval = ""
+    for char in decoded:
+        val = ord(char)
+
+        if val in UNICODE_REPLACEMENTS:
+            retval += UNICODE_REPLACEMENTS[val]
+        elif val > 255:
+            message(2, "Unhandled unicode char: " + str(val) + ": " + char)
+        else:
+            retval += chr(val)
+    return bytes(retval, 'latin-1')
 
 
 class AttributeStack:
@@ -548,9 +581,12 @@ class TextDocBuilder:
         # (which may not be black if they have hacked it with Kroma or similar utility) until
         # first color change, or new paragraph, then will go to black. This makes sure document
         # starts off in black.
-        self._color_paragraphs = config.get_bool("color_paragraphs")
-        if (self._color_paragraphs):
-            self._paragraph.add_set_forecolor (self._attributes.get_forecolor ())
+        try:
+            self._color_paragraphs = config.get_bool("color_paragraphs")
+            if (self._color_paragraphs):
+                self._paragraph.add_set_forecolor (self._attributes.get_forecolor ())
+        except:
+            pass
 
 
     def _within_anchor (self):
@@ -1017,6 +1053,9 @@ HTML_BLOCK_ELEMENTS = ('head', 'body', 'li', 'dl', 'div', 'center', 'dir',
                         'noframes', 'isindex', 'h1', 'h2', 'h3', 'h4',
                         'h5', 'h6', 'ul', 'ol', 'pre')
 
+HTML5_BLOCK_ELEMENTS = ('article', 'aside', 'figure', 'figcaption', 'footer', 'header', 'main', 'nav', 'section')
+HTML_BLOCK_ELEMENTS += HTML5_BLOCK_ELEMENTS
+
 HTML_OPTIONAL_END_ELEMENTS = ('body', 'colgroup', 'dd', 'dt', 'head', 'html',
                               'li', 'option', 'p', 'tbody', 'tfoot', 'thead')
 
@@ -1034,8 +1073,10 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
     def __init__ (self, url, text, headers = {}, config = None, attribs = {}):
         sgmllib.SGMLParser.__init__ (self)
 
+        text = _sub_unicode_symbols(text)
+
         # Convert all <tag/> to <tag /> for XHTML compatability
-        text = str(text.decode('latin-1')).replace ("/>", " />")
+        text = text.decode('latin-1').replace ("/>", " />")
 
         text = _clean_newlines (text)
         # This we use to build the document
@@ -1126,6 +1167,9 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
             'basefont': 1, #Deprecated.  Default (and original for CSS inheritance) font
             'droplink': 1,
             }
+
+        for el in HTML5_BLOCK_ELEMENTS:
+            self._unhandled_tags[el] = 1
 
         # initialize "_anchor_forecolor" in case we come across HTML with a <BODY> tag
         self._anchor_forecolor = config and config.get_string("anchor_color")
@@ -1449,7 +1493,6 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
             self.unknown_charref(name)
             return
         self.handle_data(chr(n))
-
 
     def handle_special (self, name):
         # Needed for fast xml-SGMLParser
@@ -2047,12 +2090,12 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
                 text = "%d) " % number
             elif self._ol_list_depth % 3 == 2:
                 if number < 26:
-                    text = string.uppercase[number-1] + ") "
+                    text = string.ascii_uppercase[number-1] + ") "
                 else:
                     text = "?) "
             elif self._ol_list_depth % 3 == 0:
                 if number < 26:
-                    text = string.lowercase[number-1] + ") "
+                    text = string.ascii_lowercase[number-1] + ") "
                 else:
                     text = "?) "
             table_margin = self._ol_list_depth
@@ -2392,25 +2435,8 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
     def unknown_charref (self, ref):
         if self._visible:
             val = int(ref)
-            if val == 8211:
-                self._add_unicode_char (val, "-")
-            elif val == 8212:
-                self._add_unicode_char (val, "--")
-            elif val == 8216:
-                self._add_unicode_char (val, "`")
-            elif val == 8217:
-                self._add_unicode_char (val, "´")
-            elif val == 8220:
-                self._add_unicode_char (val, "\"")
-            elif val == 8230:
-                        self._add_unicode_char (val, "...")
-            elif val == 8221:
-                self._add_unicode_char (val, "\"")
-            elif val == 8226:
-                # what's this?  Unbreakable space?
-                self._add_unicode_char (val, " ")
-            elif val == 8482:
-                self._add_unicode_char (val, "(tm)")
+            if val in UNICODE_REPLACEMENTS:
+                self._add_unicode_char (val, UNICODE_REPLACEMENTS[val])
             else:
                 self._unknown["charref-%s" % ref] = 1
                 self._add_unicode_char (val, "&#%d;" % val)
@@ -2492,7 +2518,7 @@ if __name__ == "__main__":
     # the option dictionary will be used to hold flags if that option is set
     # it gets initialized to all false
     option = {}
-    for letter in string.lowercase + string.uppercase:
+    for letter in string.ascii_lowercase + string.ascii_uppercase:
         option[letter] = None
     (optlist, args) = getopt.getopt(sys.argv[1:], "cp")
     for (k,v) in optlist:
@@ -2505,13 +2531,13 @@ if __name__ == "__main__":
         for filename in args:
             print("\nParsing %s..." % filename)
             file = open(filename, "r")
-            text = string.join (file.readlines (), "")
+            text = "".join(file.readlines())
             file.close()
             converter = StructuredHTMLParser ('file:/'+filename, text)
             if option['p']:
                 print("All parsed.  Contents is:")
                 pluckerdoc = converter.get_plucker_doc ()
-                pluckerdoc.resolve_ids (id_resolver)
+                # pluckerdoc.resolve_ids (id_resolver)
                 #pluckerdoc.pretty_print () -- has no pretty printing :-(
                 binformat = pluckerdoc.dump_record (1)
                 new_pluckerdoc = PluckerDocs.PluckerTextDocument ('file:/'+filename)

@@ -900,8 +900,6 @@ class PluckerTextParagraph:
         # the end
         data = []
 
-        # TODO: LOH HERE
-
         for (tag, value) in self._items:
             if tag == CMD_TEXT:
                 data.append (bytes(value, encoding='latin-1'))
@@ -1373,7 +1371,7 @@ class PluckerTextDocument (PluckerDocument):
         header_data = data[:_DOC_HEADER_SIZE]
 
         if _DOC_HEADER_SIZE == 8:
-            (uid, paragraphs, data_size, content_type, _self._header_flags) = struct.unpack (">HHHBB", header_data)
+            (uid, paragraphs, data_size, content_type, self._header_flags) = struct.unpack (">HHHBB", header_data)
             content_type = content_type << 8
         if content_type == DOCTYPE_HTML:
             typetext = "uncompressed text"
@@ -1439,7 +1437,7 @@ class PluckerTextDocument (PluckerDocument):
             paragraph = PluckerTextParagraph (extra_space=((attr&4) == 4))
             paragraph.undump_record (contents, verbose=verbose)
 
-            self._documents[0].append (paragraph)
+            self._documents[0].add_paragraph(paragraph)
 
             self._stats.add_paragraphs (1)
             self._stats.add_headerbytes (_PARA_HEADER_SIZE)
