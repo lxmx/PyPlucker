@@ -16,7 +16,7 @@ setup(
     license='GPLv2',
     author="Vasily Mikhaylichenko",
     author_email='vasily@lxmx.org',
-    url='https://github.com/gmyrianthous/example-publish-pypi',
+    url='https://github.com/lxmx/PyPlucker',
     install_requires=[
           'Pillow',
     ],

@@ -17,7 +17,6 @@
 ;; General entries can go into the [DEFAULT] section.
 ;;
 ;; Under Windows, the [WINDOWS] section is also searched.
-;; Under OS/2 the [OS2] and [POSIX] sections are searched
 ;; Everywhere else [POSIX] is searched.
 ;;
 
@@ -61,12 +60,12 @@
 ;;
 ;; Compression type
 ;;
-;;   doc  - use the DOC compression (works on all supported versions)
+;;   doc  - default - use the DOC compression (works on all supported versions)
 ;;   zlib - use ZLib compression (doesn't work on 2.x devices)
 ;;
 ;; Zlib compression is typically much better than DOC compression.
 ;;
-;;compression = doc
+;;compression = zlib
 
 ;;
 ;; Default category for the created document (you can assign several
@@ -112,10 +111,10 @@
 ;; versions of inlined images that had to be scaled down in size to
 ;; obey the maxwidth and maxheight parameters.
 ;;
-;;maxwidth      = 150
-;;maxheight     = 250
-;;alt_maxwidth  =
-;;alt_maxheight =
+maxwidth      = 150
+maxheight     = 400
+alt_maxwidth  = 450
+alt_maxheight = 1200
 
 ;;
 ;; If an image is smaller or equal to the given limit (in bytes)
@@ -126,10 +125,10 @@
 ;; Specify which parser to use to convert images. Defaults to
 ;; whatever the system determines to be the default parser.
 ;;
-;;   netpbm2 - NetPbm image parser
-;;   pillow  - Pillow image parser
+;;   pillow  - Native Python image library (default)
+;;   netpbm2 - NetPbm set of utilities
 ;;
-;;image_parser =
+;; image_parser = netpbm2
 
 ;; Override the default user agent (some websites are blocking Python-urllib/2.7)
 user_agent = Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US)
@@ -209,19 +208,6 @@ ignore_robots = true
 ;;
 ;;exclusion_lists =
 
-
-;; -------------------------------------------------------------------
-[OS2]
-
-;; For OS/2, you can also set the following items:
-
-;;
-;; List of filename specifying exclusion lists to be
-;; inspected.  Names are separated by semicolons.
-;;
-;;exclusion_lists =
-
-
 ;; --------------------------------------------------------------------
 [WINDOWS]
 
@@ -232,13 +218,6 @@ ignore_robots = true
 ;; inspected.  Names are separated by semicolons.
 ;;
 ;;exclusion_lists =
-
-;;
-;; Name (and maybe path) for the ImageMagick convert tool
-;; and the command line parameters.
-;;
-;;convert_program           = convert.exe
-;;convert_program_parameter = "%input% bmp:%output%"
 
 ;;
 ;; Name (and maybe path) for the Bmp2Tbmp tool and the
