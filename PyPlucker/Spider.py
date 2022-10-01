@@ -1103,11 +1103,20 @@ def main (config, excl_lists=[]):
     pluckerhome = config.get_string ('PLUCKERHOME')
     assert pluckerhome is not None
 
-    if not os.path.exists (pluckerhome) or not os.path.isdir (pluckerhome):
-        error ("Pluckerhome (%s) does not exist or isn't a directory\n" % pluckerhome)
+    if not os.path.exists (pluckerhome):
+        message(0, "Pluckerhome (%s) doesn't exist, creating\n" % pluckerhome)
+        os.mkdir(pluckerhome)
+
+    if not os.path.exists (pluckerdir):
+        message(0, "Pluckerdir (%s) doesn't exist, creating\n" % pluckerdir)
+        os.mkdir(pluckerdir)
+
+    if not os.path.isdir (pluckerhome):
+        error("Pluckerhome (%s) isn't a directory\n" % pluckerhome)
         sys.exit (1)
-    if not os.path.exists (pluckerdir) or not os.path.isdir (pluckerdir):
-        error ("Pluckerdir (%s) does not exist or isn't a directory\n" % pluckerdir)
+
+    if not os.path.isdir (pluckerdir):
+        error ("Pluckerdir (%s) isn't a directory\n" % pluckerdir)
         sys.exit (1)
 
     verbosity = config.get_int ('verbosity', 1)
