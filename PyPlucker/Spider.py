@@ -1165,14 +1165,14 @@ def main (config, excl_lists=[]):
 
     alias_list = AliasList ()
 
-    if config.get_bool ('zlib_compression', 1):
+    if config.get_bool ('zlib_compression', 0):
         try:
             import zlib
         except ImportError:
             message(0, "Your Python installation does not support ZLib compression.")
             message(0, "We fall back to DOC compression.")
             config.set ('zlib_compression', 'false')
-    if config.get_bool ('zlib_compression', 1):
+    if config.get_bool ('zlib_compression', 0):
         owner_id = config.get_string('owner_id_build')
         if owner_id:
             PyPlucker.PluckerDocs.UseZLibCompression (owner_id)
