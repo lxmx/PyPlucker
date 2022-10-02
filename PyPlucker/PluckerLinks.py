@@ -69,7 +69,7 @@ class Links:
                     data.append (rev[i + count])
                 data.append ("\000")
                 i = i + 1
-            data = string.join (data, "")
+            data = "".join(data)
 
             last = count + i - 1
             self._lists.append (data)
@@ -78,7 +78,7 @@ class Links:
             count = i + count
             this_id = this_id + 1
 
-        self._index = string.join (idx, "")
+        self._index = "".join (idx)
 
         sys.stderr.write("PluckerLinks.Links._lists is\n")
         for element in self._lists:

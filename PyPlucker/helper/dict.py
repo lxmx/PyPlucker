@@ -111,13 +111,13 @@ class DictCompartment:
         res = []
         for x in list(self.keys ()):
             res.append ("%s: %s" % (repr (x), self[x]))
-        return  "{" + string.join (res, ", ") + "}"
+        return  "{" + ", ".join(res) + "}"
 
     def __repr__ (self):
         res = []
         for x in list(self.keys ()):
             res.append ("%s: %s" % (repr (x), self[x]))
-        return  ("<DictCompartment '%s': " % self._official_prefix) + string.join (res, ", ") + ">"
+        return  ("<DictCompartment '%s': " % self._official_prefix) + ", ".join(res) + ">"
 
     def sync (self):
         if hasattr (self._dict, 'sync'):
@@ -185,5 +185,5 @@ class CachingDictCompartment (DictCompartment):
         res = []
         for x in list(self.keys ()):
             res.append ("%s: %s" % (repr (x), self[x]))
-        return  ("<CachingDictCompartments '%s': " % self._official_prefix) + string.join (res, ", ") + ">"
+        return  ("<CachingDictCompartments '%s': " % self._official_prefix) + ", ".join(res) + ">"
 

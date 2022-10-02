@@ -49,7 +49,7 @@ Also, on some systems, ll_CC_cc is used, where cc is an encoding (e.g.
 ISO8859-1.  For this we also check ll_CC and ll.
 This seems to mirror the behaviour of other programs.
 """
-import os, string
+import os
 
 prefix = '/usr/local'
 localedir = prefix + '/share/locale'
@@ -57,13 +57,13 @@ localedir = prefix + '/share/locale'
 lang = []
 for env in 'LANGUAGE', 'LC_ALL', 'LC_MESSAGES', 'LANG':
         if env in os.environ:
-                lang = string.split(os.environ[env], ':')
+                lang = os.environ[env].split(':')
                 break
 for l in lang:
-        pos = string.rfind(l, "_")
+        pos = l.rfind("_")
         if pos != -1:
                 lang.append(l[:pos])
-                pos = string.rfind(l[:pos], "_")
+                pos = l[:pos].rfind("_")
                 if pos != -1:
                         lang.append(l[:pos])
         del pos # clean up
@@ -226,7 +226,6 @@ if xgettext:
                 def save(self, file):
                         pass
                 def output(self, fp):
-                        import string
                         fp.write('# POT file for domain %s\n' % (self.domain,))
                         for str in list(self._strings.keys()):
                                 pos = ["%s(%s):%d" % x for x in self._strings[str]]
@@ -242,7 +241,7 @@ if xgettext:
                                 fp.write('\n')
                                 if '\n' in str:
                                         fp.write('msgid ""\n')
-                                        lines = string.split(str, '\n')
+                                        lines = str.split('\n')
                                         lines = ['"%s\\n"\n' % (x,) for x in lines[:-1]] + \
                                                     ['"%s"\n' % (lines[-1],)]
                                         fp.writelines(lines)

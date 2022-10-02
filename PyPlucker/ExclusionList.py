@@ -48,7 +48,7 @@ class ExclusionList:
         for orig_line in f.readlines():
             if orig_line[-1] == '\n':
                 orig_line = orig_line[:-1]
-            line = string.strip (orig_line)
+            line = orig_line.strip()
             if not line:
                 # empty line
                 continue

@@ -25,7 +25,7 @@ def WordParser (url, data, headers, config, attributes):
 
     check = os.path.basename (worddoc_converter)
     (check, ext) = os.path.splitext (check)
-    check = string.lower (check)
+    check = check.lower()
 
     if check == 'wvware':
         # need to save data to a local file

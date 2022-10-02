@@ -91,7 +91,7 @@ __author__  = "Timothy O'Malley <timo@alum.mit.edu>"
 #
 # Imports
 #
-import select, string
+import select
 import socket
 if not hasattr(socket, "_no_timeoutsocket"):
     _socket = socket.socket
@@ -366,7 +366,7 @@ class TimeoutFile:
         _sock = self._sock
         _bufsize = self._bufsize
         while 1:
-            idx = string.find(_sock._inqueue, "\n")
+            idx = _sock._inqueue.find("\n")
             if idx >= 0:
                 break
             datalen = len(_sock._inqueue)
@@ -396,7 +396,7 @@ class TimeoutFile:
         result = []
         data = self.read()
         while data:
-            idx = string.find(data, "\n")
+            idx = data.find("\n")
             if idx >= 0:
                 idx = idx + 1
                 result.append( data[:idx] )

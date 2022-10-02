@@ -142,7 +142,7 @@ def null_terminated(s):
     return s
 
 def trim_null(s):
-    return string.split(s, '\0')[0]
+    return s.split('\0')[0]
 
 def pad_null(s, l):
     if len(s) > l - 1:

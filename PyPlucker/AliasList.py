@@ -46,8 +46,7 @@ class AliasList:
 
 
     def __repr__ (self):
-        import string
         res = []
         for i in list(self._dict.keys ()):
             res.append ("'%s' -> '%s'" % (i, self.get (i)))
-        return "<AliasList: " + string.join (res, ", ") + ">"
+        return "<AliasList: " + ", ".join(res) + ">"

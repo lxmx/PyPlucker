@@ -997,7 +997,7 @@ class PlainTextParser:
     """Parsing a simple Text"""
 
     def __init__ (self, url, text, headers, config, attribs):
-        text = _clean_newlines (text)
+        text = _clean_newlines (text.decode('latin-1'))
         # This we use to build the document
         self._doc = TextDocBuilder (url, config)
         if "charset" in headers:
@@ -2193,7 +2193,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
             border = 1
         # Robert: Colored nested tables aren't supported, but could be added.
         if 'bordercolor' in attr:
-            rgb = string.lower (attr['bordercolor'])
+            rgb = attr['bordercolor'].lower()
             self._tableborder_forecolor = rgb
         else:
             self._tableborder_forecolor = "default"
@@ -2311,7 +2311,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         attributes = _list_to_dict (attributes)
         alignment = 0
         if 'align' in attributes:
-            align = string.lower (attributes['align'])
+            align = attributes['align'].lower()
             if align == 'left':
                 alignment = 0
             elif align == 'center':
