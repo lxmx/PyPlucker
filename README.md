@@ -4,7 +4,7 @@
 
 It's 2022 and you need a Palm again!
 
-This is an updated version of the original Python based Plucker parser. It downloads and  your favorite web pages or converts local files for the [Plucker app](https://palmdb.net/app/plucker).
+This is an updated version of the original Python based Plucker parser. It downloads and converts your favorite web pages and local files for the [Plucker app](https://palmdb.net/app/plucker).
 
 <img src="https://user-images.githubusercontent.com/58649917/153739856-226c672f-bfb9-4436-ac2d-de79e63a4e3c.png" width=320/>
 
