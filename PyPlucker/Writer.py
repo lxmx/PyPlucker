@@ -15,7 +15,7 @@ Distributable under the GNU General Public License Version 2 or newer.
 """
 
 
-import os, struct, string, time, helper.PQAAppInfo, sys, urllib.request, urllib.parse, urllib.error, functools
+import os, struct, string, time, PyPlucker.helper.PQAAppInfo, sys, urllib.request, urllib.parse, urllib.error, functools
 import PyPlucker
 from PyPlucker import Url, PluckerDocs
 #from PyPlucker.helper import dict
@@ -557,11 +557,11 @@ class PDBWriter (Writer):
         info['flagBackup'] = self._flag_backup
         if self._icon:
             self._pdb_file.setAppBlock( \
-                helper.PQAAppInfo.pqa_app_info_block(self._config, \
-                                                     self._dbname, \
-                                                     self._dbversion, \
-                                                     self._big_icon, \
-                                                     self._small_icon))
+                PQAAppInfo.pqa_app_info_block(self._config, \
+                                              self._dbname, \
+                                              self._dbversion, \
+                                              self._big_icon, \
+                                              self._small_icon))
         self._pdb_file.setDBInfo (info)
 
         # Now call the super class to do the actual work

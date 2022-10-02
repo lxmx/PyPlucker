@@ -336,7 +336,7 @@ class PillowImageParser(ImageParser):
 
     def __init__(self, url, type, data, config, attribs, compress=1):
         from PIL import Image
-        import PalmImagePlugin
+        import PyPlucker.PalmImagePlugin
 
         ImageParser.__init__(self, url, type, data, config, attribs)
         try:
@@ -348,7 +348,7 @@ class PillowImageParser(ImageParser):
             raise RuntimeError("Error while opening image " + self._url + " with PIL")
 
     def _convert_to_Tbmp(self, im, pil_mode, bpp):
-        from PalmImagePlugin import Palm8BitColormapImage
+        from PyPlucker.PalmImagePlugin import Palm8BitColormapImage
 
         palmdata = io.BytesIO()
         if pil_mode == "1" or bpp == 1:

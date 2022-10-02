@@ -1,3 +1,4 @@
+import os
 from setuptools import setup, find_packages
 
 def get_version(fname=os.path.join('PyPlucker', '__init__.py')):
@@ -21,6 +22,7 @@ setup(
           'Pillow',
     ],
     scripts=["bin/plucker-build"],
+    packages=find_packages('.'),
     description='Web and document parser, converter and scraper for Plucker, the Palm OS app',
     long_description=get_long_description(),
     long_description_content_type='text/markdown',
