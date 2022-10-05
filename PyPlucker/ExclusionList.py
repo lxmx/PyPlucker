@@ -100,5 +100,5 @@ class ExclusionList:
                     if re.match (regexp, url):
                         return action
                 except:
-                    print("Invalid!!")
+                    message(2, "Invalid exclusion regexp: %s" % str(regexp))
         return self._default_action
