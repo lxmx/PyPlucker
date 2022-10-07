@@ -27,13 +27,13 @@ Optionally, install the example [~/.pluckerrc config](https://github.com/lxmx/Py
 For example, running the below:
 
 ```
-plucker-build -H http://www.floodgap.com/retrotech/plua/ --maxdepth=1 --doc-file=Plua_Revisited --bpp=4 --maxwidth=150
+plucker-build -H http://www.floodgap.com/retrotech/plua/ -M 1 -f Plua_Revisited --bpp=4 --maxwidth=150
 
 ```
 
 Will:
 
-1. Download the `http://www.floodgap.com/retrotech/plua/` page and not follow any links in it, due to `maxdepth=1`
+1. Download the `http://www.floodgap.com/retrotech/plua/` page and not follow any links in it, due to `-M 1` (i.e. `--maxdepth=1`)
 3. Convert all the graphics to 16 shades of gray due to `bpp=4` and resize to 150 pixels of maximum width (`maxwidth=150`)
 4. Produce a file called `Plua_Revisited.pdb` in the `~/.plucker` directory
 
