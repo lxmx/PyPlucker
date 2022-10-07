@@ -87,7 +87,9 @@ class PluckerFancyOpener (urllib.request.FancyURLopener):
 
         if 'HTTP_PROXY' in os.environ and ('HTTP_PROXY_USER' in os.environ and 'HTTP_PROXY_PASS' in os.environ):
             import base64
-            self.addheader ('Proxy-Authorization', 'Basic %s' % (base64.encodestring("%s:%s" % (os.environ['HTTP_PROXY_USER'], os.environ['HTTP_PROXY_PASS']))).strip())
+            auth_header = os.environ['HTTP_PROXY_USER'] + ":" + os.environ['HTTP_PROXY_PASS']
+            encoded_header = base64.b64encode(bytes(auth_header, 'ascii'))
+            self.addheader ('Proxy-Authorization', 'Basic %s' % encoded_header.decode('ascii').strip())
         #for header in self.addheaders: message(0, "%s", header)
 
 
