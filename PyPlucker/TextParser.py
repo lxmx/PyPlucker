@@ -36,11 +36,11 @@ class LibraryTooOld(ImportError):
 
 import string
 import re
-import sgmllib
 import sys
 import struct
 import urllib.request, urllib.parse, urllib.error
 import html.entities
+from PyPlucker import sgmllib
 from PyPlucker import PluckerDocs
 from PyPlucker import Url
 from PyPlucker import DEFAULT_LOCALE_CHARSET_ENCODING

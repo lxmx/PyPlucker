@@ -1,4 +1,4 @@
-__version__ = "3.6"
+__version__ = "3.7"
 
 lib_dir = "/usr/local/etc"
 
