@@ -131,10 +131,10 @@ class ImageParser:
         w = self._attribs.get('width')
         h = self._attribs.get('height')
         if w and w[-1] != '%':
-            width = int(w)
+            width = float(w)
             scaling_factor = 0
         if h and h[-1] != '%':
-            height = int(h)
+            height = float(h)
             scaling_factor = 0
 
         # Next, check for a geometry cut, and use that if present
