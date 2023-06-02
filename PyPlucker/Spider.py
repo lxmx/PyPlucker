@@ -1421,8 +1421,8 @@ def realmain (outputstream, argv=None):
         message(0, "                   Set or clear the backup bit in the output file.")
         message(0, "    --beamable, --not-beamable:")
         message(0, "                   Set or clear the beamable bit in the output file.")
-        message(0, "    --charset=<name>:")
-        message(0, "                   Set the default charset to that specified by <name>.")
+        message(0, "    --doc-encoding=<name>:")
+        message(0, "                   Encode the Plucker doc to the charset specified by <name>.")
         message(0, "    --owner-id=<name>:")
         message(0, "                   Set owner-id of the output document to <name>.")
         message(0, "    --url-pattern=<regexp-pattern>:")
@@ -1503,7 +1503,7 @@ def realmain (outputstream, argv=None):
         backup = None
         copy_protect = None
         iconfile = None
-        default_charset = None
+        doc_encoding = None
         owner_id = None
         url_pattern = None
         referrer = None
@@ -1537,8 +1537,8 @@ def realmain (outputstream, argv=None):
                                         "update-cache", "launchable",
                                         "not-launchable", "backup",
                                         "no-backup", "beamable", "not-beamable",
-                                        "icon=", "charset=", "owner-id=",
-                                        "url-pattern=", "referrer=",
+                                        "icon=", "doc-encoding=",
+                                        "owner-id=", "url-pattern=", "referrer=",
                                         "user-agent=", "title=", "author=",
                                         "status-file=", "version",
                                         "tables", "depth-first", "http-proxy=",
@@ -1659,8 +1659,8 @@ def realmain (outputstream, argv=None):
                 copy_protect = 1
             elif opt == "--icon":
                 iconfile = arg
-            elif opt == "--charset":
-                default_charset = arg
+            elif opt == "--doc-encoding":
+                doc_encoding = arg
             elif opt == "--owner-id":
                 owner_id = arg
             elif opt == "--referrer":
@@ -1783,19 +1783,17 @@ def realmain (outputstream, argv=None):
             message('Specification of an owner-id forces use of zlib compression...')
         zlib_compression = 'true'
 
-    mibenum = None
     # if not specified on command line, look in .pluckerrc
-    if default_charset is None:
-        default_charset = config.get_string("default_charset")
+    if doc_encoding is None:
+        doc_encoding = config.get_string("doc_encoding")
     # if we have one, validate it
-    if default_charset is not None:
+    if doc_encoding is not None:
         from PyPlucker.helper.CharsetMapping import charset_name_to_mibenum, charset_known_names
-        import string, re
-        mibenum = charset_name_to_mibenum(default_charset)
-        if mibenum:
-            config.set('default_charset', mibenum)
+      
+        if charset_name_to_mibenum(doc_encoding):
+            config.set('doc_encoding', doc_encoding)
         else:
-            usage ("Error:  Unsupported charset '" + default_charset + "' specified as default charset.\n"
+            usage ("Error:  Unsupported charset '" + doc_encoding + "' specified as default charset.\n"
                    "        Charset must be either a decimal MIBenum value, or one of " + str(charset_known_names()))
 
     # update the config with the user options
@@ -1876,8 +1874,6 @@ def realmain (outputstream, argv=None):
         config.set ('author_md', author)
     if title is not None:
         config.set ('title_md', title)
-    if mibenum is not None:
-        config.set ('default_charset', mibenum)
     if statusfile is not None:
         config.set ('status_file', statusfile)
     if depthfirst is not None:

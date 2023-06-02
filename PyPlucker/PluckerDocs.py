@@ -59,6 +59,7 @@ import types
 import urllib.parse
 import urllib.request, urllib.parse, urllib.error
 from . import PluckerDocs
+from PyPlucker.helper.CharsetMapping import charset_mibenum_to_name
 from functools import reduce
 try:
     import zlib
@@ -467,7 +468,7 @@ class PluckerTextParagraph:
 
 
 
-    def __init__ (self, extra_space=0):
+    def __init__ (self, extra_space=0, doc=None):
         self._data = ""
         self._items = []
         self._extra_space = extra_space
@@ -477,6 +478,7 @@ class PluckerTextParagraph:
         self._estimated_length = _PARA_HEADER_SIZE
         self._in_anchor = 0
         self._refs_cleared = 0
+        self._doc=doc
 
 
     def set_extra_spacing (self, extra_space):
@@ -902,7 +904,7 @@ class PluckerTextParagraph:
 
         for (tag, value) in self._items:
             if tag == CMD_TEXT:
-                data.append (bytes(value, encoding='latin-1'))
+                data.append (bytes(value, encoding=self._doc.get_charset(), errors='ignore'))
             elif tag == CMD_ANCHOR_START:
                 # sys.stderr.write("href=%s, id=%s\n" % (value.get('href'), value.get('recordnumber')))
                 assert self._in_anchor == 0, "Nested anchors"
@@ -1253,9 +1255,6 @@ class PluckerTextDocument (PluckerDocument):
             doc.set_charset(charset)
 
     def get_charset (self):
-        # if the document URL is via HTTP or HTTPS, and there is no charset,
-        # we apply either the user-specified default charset, or if there is
-        # none, we use ISO-8859-1, as specified in the HTTP spec.
         return self._charset
 
     def _get_part_url (self, part_no):
@@ -1333,7 +1332,7 @@ class PluckerTextDocument (PluckerDocument):
             if size_sum + len (header) + len (body) > Max_Document_Size + Next_Anchor_Size:
                 error("Truncating %s\n  size_sum = %d, len(header) = %d, len(body) = %d, total = %d\n",
                       self.get_url(), size_sum, len(header), len(body), size_sum+len(header)+len(body))
-                para = PluckerTextParagraph (5)
+                para = PluckerTextParagraph (5, doc=self)
                 para.add_text (Document_Truncated_Text)
                 (header, body) = para.dump_record()
                 headers.append (header)
@@ -1434,7 +1433,7 @@ class PluckerTextDocument (PluckerDocument):
                       "\t   offset: %d (calculated)" % \
                       (length, attr, attr_text, offset))
 
-            paragraph = PluckerTextParagraph (extra_space=((attr&4) == 4))
+            paragraph = PluckerTextParagraph (extra_space=((attr&4) == 4), doc=self)
             paragraph.undump_record (contents, verbose=verbose)
 
             self._documents[0].add_paragraph(paragraph)
@@ -1466,7 +1465,7 @@ class PluckerTextDocument (PluckerDocument):
             this_url = self._get_part_url (len (self._documents) - 1)
             next_url = self._get_part_url (len (self._documents))
             if PluckerTextDocument.link_fragments:
-                tmp_para = PluckerTextParagraph (5)
+                tmp_para = PluckerTextParagraph (5, doc=self)
                 tmp_para.add_anchor_start ({'href': next_url})
                 tmp_para.add_text (Document_Next_Part_Text)
                 tmp_para.add_anchor_end ()
@@ -1478,7 +1477,7 @@ class PluckerTextDocument (PluckerDocument):
             self._current_document = PluckerTextDocument(next_url)
             self._documents.append(self._current_document)
             if PluckerTextDocument.link_fragments:
-                tmp_para = PluckerTextParagraph (0)
+                tmp_para = PluckerTextParagraph (0, doc=self)
                 tmp_para.add_anchor_start ({'href': this_url})
                 tmp_para.add_text (Document_Previous_Part_Text)
                 tmp_para.add_anchor_end ()

@@ -67,6 +67,11 @@
 ;;
 ;;compression = zlib
 
+;; Encoding
+;;
+;; use the encoding of your Palm OS device
+doc_encoding=ISO-8859-1
+
 ;;
 ;; Default category for the created document (you can assign several
 ;; categories separated by ';')

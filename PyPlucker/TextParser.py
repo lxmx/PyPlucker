@@ -390,22 +390,16 @@ UNICODE_REPLACEMENTS = {
 }
 
 def _sub_unicode_symbols(line):
-    try:
-        decoded = line.decode('utf-8')
-    except UnicodeDecodeError:
-        return line
-
     retval = ""
-    for char in decoded:
+
+    for char in line:
         val = ord(char)
 
         if val in UNICODE_REPLACEMENTS:
             retval += UNICODE_REPLACEMENTS[val]
-        elif val > 255:
-            message(2, "Unhandled unicode char: " + str(val) + ": " + char)
         else:
-            retval += chr(val)
-    return bytes(retval, 'latin-1')
+            retval += char
+    return retval
 
 
 class AttributeStack:
@@ -566,7 +560,7 @@ class TextDocBuilder:
         self._doc = PluckerDocs.PluckerTextDocument (url)
         self._config = config
         self._attributes = AttributeStack ()
-        self._paragraph = PluckerDocs.PluckerTextParagraph ()
+        self._paragraph = PluckerDocs.PluckerTextParagraph (doc=self._doc)
         self._is_new_paragraph = 1
         self._is_new_line = 1
         self._approximate_size = 0
@@ -594,9 +588,11 @@ class TextDocBuilder:
     def _within_anchor (self):
         return not (self._anchor_dict is None)
 
+    def get_charset(self):
+        return self._doc.get_charset()
 
     def set_charset(self, charset):
-        self._doc.set_charset(charset_name_to_mibenum(charset))
+        self._doc.set_charset(charset)
 
     def set_id_tag(self, tag):
         self._doc.register_doc(tag)
@@ -609,27 +605,21 @@ class TextDocBuilder:
 
     def close (self):
         """Finish off"""
+        found_charset = self.get_charset()
+        config_charset = self._config.get_string('doc_encoding')
+
+        if config_charset:
+            self.set_charset(config_charset)
+        elif found_charset:
+            self.set_charset(found_charset)
+        else:
+            self.set_charset('utf-8')
+
         if not self._is_new_paragraph:
             self._doc.add_paragraph (self._paragraph)
-            self._paragraph = PluckerDocs.PluckerTextParagraph ()
+            self._paragraph = PluckerDocs.PluckerTextParagraph (doc=self._doc)
             self._is_new_paragraph = 1
-        if not self._doc.get_charset():
-            # see if we can supply a default charset
-            url = self._doc.get_url()
-            if self._config:
-                userspec = self._config.get_int('default_charset', 0)
-            else:
-                userspec = None
-            locale_default = charset_name_to_mibenum(DEFAULT_LOCALE_CHARSET_ENCODING)
-            # the userspec will take precedence
-            if userspec:
-                self._doc.set_charset(userspec)
-            # OK, so we have no idea.  Use the HTTP default of ISO-8859-1 (4) for
-            # http: URLs, and the environment default (if any) for others
-            elif (url[:5].lower() == 'http:' or url[:6].lower() == 'https:'):
-                self._doc.set_charset(4)
-            elif locale_default:
-                self._doc.set_charset(locale_default)
+
 
     def add_name (self, name):
         """Give name to the current paragraph"""
@@ -797,7 +787,7 @@ class TextDocBuilder:
 
         # now start new paragraph
         self._doc.add_paragraph (self._paragraph)
-        self._paragraph = PluckerDocs.PluckerTextParagraph ()
+        self._paragraph = PluckerDocs.PluckerTextParagraph (doc=self._doc)
         self._is_new_paragraph = 1
         self._is_new_line = 1
         self._approximate_size = 0
@@ -997,7 +987,7 @@ class PlainTextParser:
     """Parsing a simple Text"""
 
     def __init__ (self, url, text, headers, config, attribs):
-        text = _clean_newlines (text.decode('latin-1'))
+        text = _clean_newlines (text.decode('utf-8'))
         # This we use to build the document
         self._doc = TextDocBuilder (url, config)
         if "charset" in headers:
@@ -1075,18 +1065,33 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
     def __init__ (self, url, text, headers = {}, config = None, attribs = {}):
         sgmllib.SGMLParser.__init__ (self)
 
-        text = _sub_unicode_symbols(text)
-
-        # Convert all <tag/> to <tag /> for XHTML compatability
-        text = text.decode('latin-1').replace ("/>", " />")
-
-        text = _clean_newlines (text)
         # This we use to build the document
         self._doc = TextDocBuilder (url, config, max_paragraph_size=3000)
         self._url = url
         self._base = None        # use this if defined for relative URLs
         self._config = config
         self._attribs = attribs
+        
+        assumed_charset = 'utf-8'
+        headers_charset_name = ('charset' in headers) and headers['charset']
+
+        if headers_charset_name:
+            self._set_charset(headers_charset_name)
+            assumed_charset = headers_charset_name
+
+        # TODO: When the --filter option is set Spider.py
+        # returns the document as string, otherwise as bytes.
+        # Change Spider.py for consistency.
+        if(type(text) != str):
+            text = text.decode(assumed_charset, errors='ignore')
+
+        text = _sub_unicode_symbols(text)
+
+        # Convert all <tag/> to <tag /> for XHTML compatability
+        text = text.replace("/>", " />")
+
+        text = _clean_newlines (text)
+
         # initialize verbosity...
         self._verbosity_stack = []
         # We use different indicator for diffent depths of <menu>, <ul> etc.
@@ -1103,9 +1108,6 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         # javascript:document.write("<div>") turns it back on, because
         # it only recognizes the div, not the javascript.
         self._visible = 1
-        self._charset = 'charset' in headers and charset_name_to_mibenum(headers['charset'])
-        if self._charset:
-            self._doc.set_charset(headers['charset'])
         # Since some users are really stupid and use HTML wrong, we need a
         # stack of these values
         self._visibility_stack = []
@@ -1189,7 +1191,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         self.last_table_strike = 0
 
         # all set up, now process...
-        self.feed (text)
+        self.feed(text)
         self.close ()
 
     def close (self):
@@ -1437,7 +1439,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
             self._visible = 1
 
     def _set_charset (self, charset):
-        if charset_name_to_mibenum(charset):
+        if charset_name_to_mibenum(charset): # validate
             self._charset = charset
             self._doc.set_charset(charset)
 

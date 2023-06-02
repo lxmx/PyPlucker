@@ -20,7 +20,7 @@ import PyPlucker
 from PyPlucker import Url, PluckerDocs
 #from PyPlucker.helper import dict
 from PyPlucker.helper import prc
-from PyPlucker.helper.CharsetMapping import charset_mibenum_to_name
+from PyPlucker.helper.CharsetMapping import charset_mibenum_to_name, charset_name_to_mibenum
 from PyPlucker.UtilFns import message, error
 from PyPlucker.Url import CompareURL
 
@@ -324,7 +324,7 @@ class Writer:
         self._mapper = Mapper(self._collection, alias_list.as_dict())
 
         # figure default charset
-        mibenum = self._config.get_int('default_charset', 0) or None
+        mibenum = None
         charsets = {}
 
         if verbose > 2:
@@ -341,9 +341,10 @@ class Writer:
                 pluckerdoc.resolve_ids (self._mapper)
             if pluckerdoc.is_text_document ():
                 pluckerdoc.resolve_ids (self._mapper)
-                doc_mibenum = pluckerdoc.get_charset()
+
+                charset_name = pluckerdoc.get_charset()
+                doc_mibenum = charset_name_to_mibenum(charset_name)
                 if verbose > 2:
-                    charset_name = charset_mibenum_to_name(doc_mibenum)
                     message(2, pluckerdoc.get_url() + ' has charset ' + str(doc_mibenum) + ((charset_name and " (" + charset_name + ")") or "") + "\n")
                 if doc_mibenum in charsets:
                     charsets[doc_mibenum].append(id)
