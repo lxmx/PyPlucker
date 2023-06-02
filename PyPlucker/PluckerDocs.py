@@ -897,6 +897,7 @@ class PluckerTextParagraph:
         """(Re-)Assemble the binary representation of just the body of this paragraph.
         (returns tupel (data, padding)"""
 
+        doc_encoding = self._doc.get_charset()
         # continous appending t oa string is inefficient (uses O(n)
         # time), so we collect in all in an array and concat all in
         # the end
@@ -904,7 +905,7 @@ class PluckerTextParagraph:
 
         for (tag, value) in self._items:
             if tag == CMD_TEXT:
-                data.append (bytes(value, encoding=self._doc.get_charset(), errors='ignore'))
+                data.append (bytes(value, encoding=doc_encoding, errors='ignore'))
             elif tag == CMD_ANCHOR_START:
                 # sys.stderr.write("href=%s, id=%s\n" % (value.get('href'), value.get('recordnumber')))
                 assert self._in_anchor == 0, "Nested anchors"
@@ -937,7 +938,7 @@ class PluckerTextParagraph:
                 id = value['recordnumber']
                 if id is None:
                     if 'alt' in value:
-                        data.append (bytes(value['alt'], encoding='latin-1'))
+                        data.append (bytes(value['alt'], encoding=doc_encoding))
                     else:
                         message(3, "No recordnumber for image %s", value)
                 else:
@@ -1021,7 +1022,7 @@ class PluckerTextParagraph:
                         data.append(struct.pack (">BBBL", 0, 0x85, len(value[1]), value[0]))
                     else:
                         data.append(struct.pack (">BBBH", 0, 0x83, len(value[1]), value[0]))
-                    data.append(bytes(value[1], encoding='latin-1'))
+                    data.append(bytes(value[1], encoding=doc_encoding))
                 else:
                     pass
             elif tag == CMD_TABLE:
@@ -1506,7 +1507,7 @@ class PluckerTextDocument (PluckerDocument):
                 result[name] = (url, par_id)
 
         # do other documents chained off this one, and return results
-        #   In this lambda, x is the "result", the accumulating hash table, and y is a sub-doc.
+        #   In this lambda, x is the "result", the accumudoc_encodinglating hash table, and y is a sub-doc.
         #   The or clause is because {}.update() doesn't return a value, so we explicitly return x.
         return reduce(lambda x, y: x.update(y.get_name_map()) or x, self._documents[1:], result)
 
