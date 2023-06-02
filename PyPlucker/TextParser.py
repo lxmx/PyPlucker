@@ -371,18 +371,9 @@ def _clean_newlines (text):
     return text
 
 UNICODE_REPLACEMENTS = {
-        8211: "-",
-        8212: "--",
-        8216: "`",
-        8217: "´",
-        8220: "\"",
-        8230: "...",
-        8220: "\"",
-        8221: "\"",
         8226: " ",
         8249: "<",
         8250: ">",
-        8482: "(tm)",
         8594: "->",
         8592: "<-",
         8658: "=>",
@@ -610,10 +601,10 @@ class TextDocBuilder:
 
         if config_charset:
             self.set_charset(config_charset)
-        elif found_charset:
+        elif found_charset and (found_charset != 'utf-8'):
             self.set_charset(found_charset)
         else:
-            self.set_charset('utf-8')
+            self.set_charset('palmos')
 
         if not self._is_new_paragraph:
             self._doc.add_paragraph (self._paragraph)
@@ -1071,6 +1062,7 @@ class StructuredHTMLParser (sgmllib.SGMLParser):
         self._base = None        # use this if defined for relative URLs
         self._config = config
         self._attribs = attribs
+        self._charset = None
         
         assumed_charset = 'utf-8'
         headers_charset_name = ('charset' in headers) and headers['charset']
